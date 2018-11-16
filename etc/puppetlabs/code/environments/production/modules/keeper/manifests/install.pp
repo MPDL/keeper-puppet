@@ -338,7 +338,7 @@ class keeper::install::single {
       '__NODE_TYPE__'   => 'SINGLE',
     },
     'http' => {
-      '__NODE_FQDN__'   => '127.0.1.1',
+      '__NODE_FQDN__'   => '127.0.0.1',
       '__SERVICE_URL__' => 'http://127.0.0.1',
       '__SERVER_NAME__' => '127.0.0.1',
       '__HOST_PORT__'   => '8080',

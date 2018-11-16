@@ -70,7 +70,7 @@ class keeper::db (
     grant    => ['ALL'],
   }
 
-  $log_bin = $db['__LOG_BIN__']
+  $log_bin = $db['__LOG_BIN_DIR__']
   # create bin log dir
   exec { "create_${log_bin}":
     command => "mkdir -p ${log_bin}",
