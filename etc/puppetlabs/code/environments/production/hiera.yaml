@@ -1,0 +1,10 @@
+---
+version: 5
+hierarchy:
+  - name: "Keeper hierarchy level"
+    data_hash: ini_data
+    paths:
+      #- "keeper.yaml"
+      - "keeper.ini"
+      #- "good.ini"
+
