@@ -1,6 +1,4 @@
 # puppet module install puppetlabs-apt 
-include apt
-include mysql
 
 class keeper::db (
   $props = $keeper::params::props,
@@ -9,9 +7,7 @@ class keeper::db (
   $db = $props['db']
   $pkgs = $props['package-deps']
 
-  package { 'galera-3':
-    ensure => "${pkgs['galera-3']}",
-  }
+  include apt
 
   # add mariadb apt repo
   apt::source { 'mariadb':
@@ -28,6 +24,19 @@ class keeper::db (
     },
   }
 
+  exec { 'apt-update':
+    command  => "apt-get update",
+    path     => ["/usr/bin", "/bin"],
+    require => [ Apt::Source["mariadb"] ],
+  }
+
+  package { 'galera-3':
+    ensure    => "${pkgs['galera-3']}",
+    require   => [Exec["apt-update"]],
+  }
+
+
+  #include '::mysql::server'
 
   # puppet module install puppetlabs-mysql 
   # mariadb-server
@@ -36,6 +45,7 @@ class keeper::db (
       package_ensure          => "${pkgs['mariadb-server']}",
       service_name            => 'mysql',
       root_password           => "${db['__DB_ROOT_PASSWORD__']}",
+      require                 => [Exec["apt-update"]],
   }
 
   #Apt::Source['mariadb'] ~>
@@ -46,6 +56,7 @@ class keeper::db (
   class {'::mysql::client':
     package_name => 'mariadb-client',
     package_ensure => "${pkgs['mariadb-client']}",
+    require   => [Exec["apt-update"]],
   }
 
   #Apt::Source['mariadb'] ~>
