@@ -41,9 +41,6 @@ define keeper::install (
   #override $clean_sections with $node_props
   $node_ini = deep_merge($clean_sections, $node_props)  
 
-  # generate keeper ini 
-  create_ini_settings($node_ini, $ini_defaults)
-
   require keeper::db
 
   ##### USER / GROUP
@@ -54,6 +51,7 @@ define keeper::install (
   user { "${sys['__OS_USER__']}":
     ensure      => present,
     comment     => 'Seafile User',
+    managehome  => true,
     gid         => "${sys['__OS_GID__']}",
     uid         => "${sys['__OS_UID__']}",
     require     => Group["${sys['__OS_GROUP__']}"],
@@ -64,6 +62,7 @@ define keeper::install (
   #### MODULES
   # install debian modules
   $deb_modules = [
+    "build-essential",
     "git-core",
     "openjdk-7-jre",
     "python2.7",
@@ -166,6 +165,12 @@ define keeper::install (
 
   ###### SEAFILE
 
+  # set owner:group to root dir recursively
+  file { "${seafile_root}":
+    ensure  => directory,
+    *       => $attr,
+  }
+
   # seafile sources
   archive { "${seafile_root}/${props['release']['__SEAFILE_SOURCE_TAR__']}":
     source       => "puppet:///modules/keeper/${props['release']['__SEAFILE_SOURCE_TAR__']}",
@@ -175,22 +180,23 @@ define keeper::install (
     group        => "${sys['__OS_GROUP__']}",
     creates      => "${seafile_root}/${seafile_ver}",
     cleanup      => false,
-    require => [ File["${seafile_root}"] ],
+    require       => [ File["$seafile_root"] ],
   }
   
   # seafile latest license
   file { "${seafile_root}/seafile-license.txt":
     *      => $attr,
     source  => "puppet:///keeper_files/seafile-license.txt",
-    require => [ File["${seafile_root}"] ],
   }
 
-  # set owner:group to root dir recursively
-  file { "${seafile_root}":
-    ensure  => directory,
-    recurse => true,
-    *       => $attr,
+  # generate keeper ini 
+  create_ini_settings($node_ini, $ini_defaults)
+
+  file { "${ini_defaults['path']}":
+    *      => $attr,
   }
+
+
 
   # should be set for correct work of document preview 
   file { "/tmp":
@@ -271,9 +277,19 @@ define keeper::install (
     command   => "./build.py deploy --all -y",
     path      => ["${keeper_ext}", "${seafile_root}/seafile-server-latest/seahub", "/bin", "/usr/bin", "/usr/local/bin", "/sbin", ],
     cwd       => "${keeper_ext}",
+    #require   => [ Exec["keeper-pip-modules"], Exec['setup-seafile-mysql.sh'], Vcsrepo["${seafile_root}/KEEPER"], Package['nginx'], Ini_setting["${ini_defaults['path']} [global] __NODE_TYPE__"] ],
     require   => [ Exec["keeper-pip-modules"], Exec['setup-seafile-mysql.sh'], Vcsrepo["${seafile_root}/KEEPER"], Package['nginx'] ],
     logoutput =>  true,
   }
+
+  # set correct permissions for seafile and  
+  #file { "${seafile_root}-set-permissions":
+    #path    => "${seafile_root}",
+    #ensure  => present,
+    #recurse => true,
+    #*       => $attr,
+    #require => [ Exec["keeper-deploy-all"] ]
+  #}
 
   # create mysql keeper tables
   exec { 'create_keeper_tables':
