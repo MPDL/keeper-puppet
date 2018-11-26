@@ -6,5 +6,4 @@ hierarchy:
     paths:
       #- "keeper.yaml"
       - "keeper.ini"
-      #- "good.ini"
 
