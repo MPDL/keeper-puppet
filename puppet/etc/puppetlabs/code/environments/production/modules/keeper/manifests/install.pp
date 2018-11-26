@@ -119,7 +119,8 @@ define keeper::install (
     command => "easy_install pip==${pkgs['pip']}",
     path    => ["/usr/bin", "/usr/local/bin", "/sbin"],
     require => Package["python-setuptools"],
-    creates => '/usr/local/bin/pip'
+    creates => '/usr/local/bin/pip',
+    logoutput =>  true,
   }
 
   # install seafile pip modules
@@ -130,6 +131,7 @@ define keeper::install (
       path    => ["/usr/bin", "/usr/local/bin", "/sbin"],
       require => Exec["python-pip"],
       unless  => "pip show ${m}",
+      logoutput =>  true,
     }
   }
 
@@ -166,13 +168,14 @@ define keeper::install (
   ###### SEAFILE
 
   # set owner:group to root dir recursively
-  file { "${seafile_root}":
+  file { "$seafile_root" :
     ensure  => directory,
     *       => $attr,
   }
 
+  $seafile_arch = "${seafile_root}/${props['release']['__SEAFILE_SOURCE_TAR__']}"
   # seafile sources
-  archive { "${seafile_root}/${props['release']['__SEAFILE_SOURCE_TAR__']}":
+  archive { "$seafile_arch":
     source       => "puppet:///modules/keeper/${props['release']['__SEAFILE_SOURCE_TAR__']}",
     extract      => true,
     extract_path => "${seafile_root}",
@@ -208,10 +211,11 @@ define keeper::install (
   # see https://manual.seafile.com/deploy/using_mysql.html#setup-in-non-interactive-way
   # NOTE: DBs have been already created in mariadb.pp!!!
   exec { 'setup-seafile-mysql.sh':
-    command      => "setup-seafile-mysql.sh auto -n ${props['http']['__SERVER_NAME__']} -i ${props['http']['__NODE_FQDN__']} -d ${seafile_root}/seafile-data -e 1 -t 3306 -u ${db['__DB_USER__']} -w ${db['__DB_PASSWORD__']} -c ccnet-db -s seafile-db -b seahub-db",
+    command      => "setup-seafile-mysql.sh auto -n ${props['http']['__SERVER_NAME__']} -i ${props['http']['__NODE_FQDN__']} -d ${seafile_root}/seafile-data -e 1 -t ${db['__DB_PORT__']} -u ${db['__DB_USER__']} -w ${db['__DB_PASSWORD__']} -c ccnet-db -s seafile-db -b seahub-db",
     path         => ["${seafile_root}/${seafile_ver}", "/usr/bin", "/usr/local/bin", "/bin"],
     cwd          => "${seafile_root}/${seafile_ver}",
     creates      => "${seafile_root}/seafile-data",
+    require => [ Archive["${seafile_arch}"] ],
     logoutput =>  true,
   }
 
@@ -229,6 +233,13 @@ define keeper::install (
     path     => ["/usr/bin", "/bin"],
     require => [ File["${seafile_root}/conf/admin.txt"] ],
   }
+
+  file { "${seafile_root}/seafile-data" :
+    ensure  => directory,
+    *       => $attr,
+    require => Exec['setup-seafile-mysql.sh'] ,
+  }
+
 
   #### KEEPER
 
@@ -277,7 +288,6 @@ define keeper::install (
     command   => "./build.py deploy --all -y",
     path      => ["${keeper_ext}", "${seafile_root}/seafile-server-latest/seahub", "/bin", "/usr/bin", "/usr/local/bin", "/sbin", ],
     cwd       => "${keeper_ext}",
-    #require   => [ Exec["keeper-pip-modules"], Exec['setup-seafile-mysql.sh'], Vcsrepo["${seafile_root}/KEEPER"], Package['nginx'], Ini_setting["${ini_defaults['path']} [global] __NODE_TYPE__"] ],
     require   => [ Exec["keeper-pip-modules"], Exec['setup-seafile-mysql.sh'], Vcsrepo["${seafile_root}/KEEPER"], Package['nginx'] ],
     logoutput =>  true,
   }
@@ -334,7 +344,6 @@ define keeper::install (
     ensure     => running,
     enable     => true,
     hasrestart => true,
-    #require   => [ Package['nginx'], Package['memcached'], Class['::mysql::server'] ], 
     require    => [ Service['memcached'], Service['nginx'], Service['mysqld'] ], 
   }
 
@@ -357,7 +366,6 @@ class keeper::install::single {
       #'__NODE_FQDN__'   => '127.0.0.1',
       #'__SERVICE_URL__' => 'http://127.0.0.1',
       #'__SERVER_NAME__' => '127.0.0.1',
-      #'__HOST_PORT__'   => '8080',
       #} 
   }
 
@@ -408,7 +416,7 @@ class keeper::install::back {
       '__NODE_TYPE__' => 'BACKGROUND', 
     },
     'http' => { 
-      '__NODE_FQDN__' => '127.0.1.1',
+      '__NODE_FQDN__' => '127.0.0.1',
     },
     'office' => { '__IS_OFFICE_CONVERTOR_NODE__' => 'true' },
   }
