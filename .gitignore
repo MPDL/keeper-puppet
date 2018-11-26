@@ -9,13 +9,7 @@
 !/puppet/etc/puppetlabs/puppet/fileserver.conf
 !/puppet/etc/puppetlabs/puppet/hiera.yaml
 # allow env dirs and files  
-!/puppet/etc/puppetlabs/puppet/code/environments/production/manifests/**
-!/puppet/etc/puppetlabs/puppet/code/environments/production/modules/keeper/**
-!/puppet/etc/puppetlabs/puppet/code/environments/production/Puppetfile
-!/puppet/etc/puppetlabs/puppet/code/environments/production/hiera.yaml
-
-
-
-
-
-
+!/puppet/etc/puppetlabs/code/environments/production/manifests/**
+!puppet/etc/puppetlabs/code/environments/production/modules/keeper/**
+!/puppet/etc/puppetlabs/code/environments/production/Puppetfile
+!/puppet/etc/puppetlabs/code/environments/production/hiera.yaml
