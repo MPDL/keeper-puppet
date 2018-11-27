@@ -1,7 +1,7 @@
 # keeper-puppet
 Puppet installation scripts for KEEPER infrastructure
 
-Install git-lfs: https://github.com/git-lfs/git-lfs/wiki/Installation
+Install git-lfs: https://github.com/git-lfs/git-lfs/wiki/Installation before cloning.
 
 ```
 mkdir puppet/etc/puppetlabs/code/environments/production/data
