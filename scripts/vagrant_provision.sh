@@ -1,29 +1,31 @@
 #!/bin/bash
 
-apt-get remove binutils -y
-apt-get install software-properties-common -y
-add-apt-repository 'deb http://ftp.debian.org/debian jessie-backports main'
-#add-apt-repository 'deb http://ftp.us.debian.org/debian unstable main contrib non-free'
-wget https://apt.puppetlabs.com/puppet-release-stretch.deb
-dpkg -i puppet-release-stretch.deb
-apt-get update
-echo "de_DE.UTF-8 UTF-8" >> /etc/locale.gen
-locale-gen
+wget https://apt.puppetlabs.com/puppet5-release-bionic.deb
+sudo dpkg -i --force-all puppet5-release-bionic.deb
+rm -rf puppet5-release-bionic.deb
+sudo apt update
 apt-get -y install git zsh vim-nox 
 chsh -s $(which zsh)
 sh -c "$(wget https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -)"
 sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="agnoster"/g' /root/.zshrc
 echo "PATH=$PATH:/opt/puppetlabs/bin" >> /root/.zshrc
 apt-get -y install puppet
-apt-get -y install puppet-agent
 echo 'Defaults        secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:/opt/puppetlabs/bin:/opt/puppetlabs/puppet/bin"' >/etc/sudoers.d/puppet
 
-/opt/puppetlabs/puppet/bin/gem install inifile 
-/opt/puppetlabs/puppet/bin/puppet module install puppetlabs-mysql
-/opt/puppetlabs/puppet/bin/puppet module install puppet-archive
-/opt/puppetlabs/puppet/bin/puppet module install puppetlabs-apt
-/opt/puppetlabs/puppet/bin/puppet module install puppetlabs-stdlib
-/opt/puppetlabs/puppet/bin/puppet module install puppetlabs-inifile
-/opt/puppetlabs/puppet/bin/puppet module install puppetlabs-vcsrepo 
+keeper-service stop
 
-/opt/puppetlabs/puppet/bin/puppet apply -vd /etc/puppetlabs/code/environments/production/manifests/site.pp
+rm -rf /opt/seafile
+mysql -u root -e 'drop database `ccnet-db`; drop database `keeper-db`; drop database `seafile-db`; drop database `seahub-db`;'
+
+keeper-service stop
+
+gem install inifile
+puppet module install puppetlabs-mysql
+puppet module install puppet-archive
+puppet module install puppetlabs-apt
+puppet module install puppetlabs-stdlib
+puppet module install puppetlabs-inifile
+puppet module install puppetlabs-vcsrepo
+puppet module install brainsware-resources_deep_merge
+
+puppet apply /etc/puppet/code/environments/production/manifests/site.pp --environment=production -vd

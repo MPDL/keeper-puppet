@@ -5,18 +5,23 @@ class keeper::test {
   #  see https://github.com/haiwen/seafile-server/blob/master/scripts/check_init_admin.py#L358
   
   $sections =[ 
-    'global', 
+    'global',
+    'system', 
     'backend',  
     'db',
     'email', 
     'background', 
     'office',
     'backup',
+    'bloxberg',
+    'external_resources',
+    'archiving',
+    'doi',
     'branding',
     'http',
     'memcached',
     'logging',
-    'apt-locations',
+    'tests'
   ]
 
   $props = $sections.reduce( {} ) |$memo, $sec| {

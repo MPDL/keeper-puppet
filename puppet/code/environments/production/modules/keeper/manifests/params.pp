@@ -9,13 +9,17 @@ class keeper::params {
     'background', 
     'office',
     'backup',
+    'bloxberg',
+    'external_resources',
+    'archiving',
+    'doi',
     'branding',
     'http',
     'memcached',
     'logging',
     'release',
     'package-deps',
-    'apt-locations',
+    'repositories'
   ]
 
   $props = $sections.reduce( {} ) |$memo, $sec| {

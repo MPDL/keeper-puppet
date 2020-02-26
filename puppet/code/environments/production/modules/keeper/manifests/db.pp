@@ -11,12 +11,12 @@ class keeper::db (
 
   # add mariadb apt repo
   apt::source { 'mariadb':
-    location => "${props['apt-locations']['mariadb']}",
+    location => "${props['repositories']['__MARIADB__']}",
     repos    => 'main',
-    release  => 'jessie',
+    release  => "${props['repositories']['__OS_RELEASE__']}",
     key      => {
-      id     => '199369E5404BD5FC7D2FE43BCBCB082A1BB943DB',
-      server => 'hkp://keyserver.ubuntu.com:80',
+      id     => "${props['repositories']['__MARIADB_KEYID__']}",
+      server => "${props['repositories']['__MARIADB_KEYSERVER__']}",
     },
     include  =>  {
       'src' =>  false,
@@ -30,8 +30,8 @@ class keeper::db (
     require => [ Apt::Source["mariadb"] ],
   }
 
-  package { 'galera-3':
-    ensure    => "${pkgs['galera-3']}",
+  package { 'galera-4':
+    ensure    => "${pkgs['galera-4']}",
     require   => [Exec["apt-update"]],
   }
 
@@ -81,7 +81,7 @@ class keeper::db (
     grant    => ['ALL'],
   }
 
-  $log_bin = $db['__LOG_BIN_DIR__']
+  $log_bin = $db['__LOG_BIN__']
   # create bin log dir
   exec { "create_${log_bin}":
     command => "mkdir -p ${log_bin}",

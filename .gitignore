@@ -1,15 +1,3 @@
 # black list
 .vagrant
 **.swp
-
-# white list
-# ignore all in puppet
-/puppet/**
-# allow global confs  
-!/puppet/etc/puppetlabs/puppet/fileserver.conf
-!/puppet/etc/puppetlabs/puppet/hiera.yaml
-# allow env dirs and files  
-!/puppet/etc/puppetlabs/code/environments/production/manifests/**
-!puppet/etc/puppetlabs/code/environments/production/modules/keeper/**
-!/puppet/etc/puppetlabs/code/environments/production/Puppetfile
-!/puppet/etc/puppetlabs/code/environments/production/hiera.yaml

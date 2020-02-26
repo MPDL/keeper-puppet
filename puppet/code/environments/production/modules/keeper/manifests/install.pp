@@ -36,7 +36,7 @@ define keeper::install (
       '__KEEPER_ADMIN_PASSWORD__'   => { 'ensure' => 'absent' },
     },
     })
-  $clean_sections = (($clean_settings.delete('apt-locations')).delete('package-deps')).delete('release')
+  $clean_sections = (($clean_settings.delete('repoistories')).delete('package-deps')).delete('release')
 
   #override $clean_sections with $node_props
   $node_ini = deep_merge($clean_sections, $node_props)  
@@ -62,12 +62,15 @@ define keeper::install (
   #### MODULES
   # install debian modules
   $deb_modules = [
+    "lsb-release",
     "build-essential",
     "git-core",
-    "openjdk-7-jre",
+    #"openjdk-7-jre",
+    "openjdk-8-jre",
     "python2.7",
     "poppler-utils",
-    "python-imaging",
+    #"python-imaging",
+    "python-pil",
     "python-mysqldb", 
     "python-memcache",
     "python-ldap",
@@ -94,19 +97,10 @@ define keeper::install (
     "libffi-dev",
     "libssl-dev",
     "libldap2-dev",
+    "libmysqlclient-dev",
     ]      
   package { $deb_modules:
     ensure => latest,
-  }
-
-  # remove python3 
-  $python3 = [
-    "python3",
-    "python3.4",
-    "python3.4-minimal",
-  ]
-  package { $python3:
-    ensure => absent,
   }
 
   # install easy_install 
@@ -116,7 +110,7 @@ define keeper::install (
 
   # install pip      
   exec { "python-pip":
-    command => "easy_install pip==${pkgs['pip']}",
+    command => "python /usr/lib/python2.7/dist-packages/easy_install.py pip",
     path    => ["/usr/bin", "/usr/local/bin", "/sbin"],
     require => Package["python-setuptools"],
     creates => '/usr/local/bin/pip',
@@ -136,23 +130,23 @@ define keeper::install (
   }
 
   # Office/PDF Document Preview for BACKGROUND node
-  if $props['global']['__NODE_TYPE__'] in ['SINGLE', 'BACKGROUND'] {
-    each(["libreoffice", "libreoffice-script-provider-python", ]) |$p| {
-      package { "${p}":
-        ensure => "${pkgs[$p]}", 
-      }
-    }
-  }
+  #if $props['global']['__NODE_TYPE__'] in ['SINGLE', 'BACKGROUND'] {
+  #  each(["libreoffice", "libreoffice-script-provider-python", ]) |$p| {
+  #    package { "${p}":
+  #      ensure => "${pkgs[$p]}", 
+  #    }
+  #  }
+  #}
 
   include apt
   # add nginx apt repo
   apt::source { 'nginx_repo':
-    location => "${props['apt-locations']['nginx']}",
+    location => "${props['repositories']['__NGINX__']}",
     repos    => 'nginx',
-    release  => 'jessie',
+    release  => "${props['repositories']['__OS_RELEASE__']}",
     key      => {
-      id     => 'ABF5BD827BD9BF62',
-      source => 'http://nginx.org/packages/keys/nginx_signing.key',
+      id     => "${props['repositories']['__NGINX_KEYID__']}",
+      source => "${props['repositories']['__NGINX_KEYSERVER__']}"
     },
     include  =>  {
       'src' =>  false,
@@ -189,7 +183,7 @@ define keeper::install (
   # seafile latest license
   file { "${seafile_root}/seafile-license.txt":
     *      => $attr,
-    source  => "puppet:///keeper_files/seafile-license.txt",
+    source  => "${settings::environmentpath}/${settings::environment}/data/keeper_files/seafile-license.txt",
   }
 
   # generate keeper ini 
@@ -202,9 +196,14 @@ define keeper::install (
 
 
   # should be set for correct work of document preview 
-  file { "/tmp":
+  file { "/run/tmp":
     ensure  => directory,
     mode    => '1777',
+  }
+
+  file { "${props['archiving']['__LOCAL_STORAGE__']}":
+    ensure => 'directory',
+    mode   => '1777',
   }
 
   # install seafile for mysql in non-interactive mode 
@@ -239,7 +238,6 @@ define keeper::install (
     *       => $attr,
     require => Exec['setup-seafile-mysql.sh'] ,
   }
-
 
   #### KEEPER
 
@@ -351,6 +349,20 @@ define keeper::install (
     command     => '/bin/systemctl restart nginx',
     require     => Service['keeper']
   }
+
+  # remove python3 
+  $python3 = [
+    "python3",
+    "python3-minimal",
+    "python3.6",
+    "python3.6-minimal",
+    "distro-info-data",
+    "libpython3-stdlib",
+  ]
+  package { $python3:
+    ensure => absent,
+  }
+
 
 }
 
