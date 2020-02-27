@@ -201,10 +201,23 @@ define keeper::install (
     mode    => '1777',
   }
 
+  $dirtree = dirtree($::rubysitedir)
+
+  notify { $dirtree: }
+
+  dirtree { 'keeper archive storage':
+    ensure  => present,
+    path    => "${props['archiving']['__LOCAL_STORAGE__']}",
+    parents => true,
+  }
+
   file { "${props['archiving']['__LOCAL_STORAGE__']}":
     ensure => directory,
     mode   => '1777',
   }
+
+
+
 
   # install seafile for mysql in non-interactive mode 
   # see https://manual.seafile.com/deploy/using_mysql.html#setup-in-non-interactive-way
