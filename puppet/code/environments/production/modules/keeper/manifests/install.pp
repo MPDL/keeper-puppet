@@ -202,7 +202,7 @@ define keeper::install (
   }
 
   file { "${props['archiving']['__LOCAL_STORAGE__']}":
-    ensure => 'directory',
+    ensure => directory,
     mode   => '1777',
   }
 

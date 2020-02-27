@@ -13,10 +13,11 @@ Vagrant.configure("2") do |config|
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://atlas.hashicorp.com/search.
   # If you have trouble running the 64-bit Vagrant VM, try this instead:
-  config.vm.box = "debian/jessie64"
-  #config.vm.box = "debian/stretch64"
+  config.vm.box = "ubuntu/bionic64"
+  config.vm.box_version = "20200225.0.0"
   
-  config.vm.hostname = "single-dev-keeper.mpdl.mpg.de"
+  #config.vm.hostname = "single-dev-keeper.mpdl.mpg.de"
+  config.vm.hostname = "192.168.121.38"
 
   config.vm.define "single-dev"
 
@@ -33,7 +34,7 @@ Vagrant.configure("2") do |config|
 
   # Create a private network, which allows host-only access to the machine
   # using a specific IP.
-  config.vm.network "private_network", ip: "192.168.33.10"
+  config.vm.network "private_network", ip: "192.168.121.38"
 
   # Create a public network, which generally matched to bridged network.
   # Bridged networks make the machine appear as another physical device on
