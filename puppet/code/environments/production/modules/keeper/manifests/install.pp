@@ -89,6 +89,7 @@ define keeper::install (
     "libfreetype6-dev",
     "monitoring-plugins",
     # keeper 
+    "nodejs",
     "python-apt",
     "python-debian",
     "python-debianbts",
@@ -97,10 +98,21 @@ define keeper::install (
     "libffi-dev",
     "libssl-dev",
     "libldap2-dev",
-    "libmysqlclient-dev",
+    "default-libmysqlclient-dev",
     ]      
   package { $deb_modules:
     ensure => latest,
+  }
+  
+  package { "npm":
+    ensure => latest,
+    require  => Package["nodejs"],
+  }
+  
+  package { "requirejs":
+    ensure   => "present",
+    provider => "npm",
+    require  => Package["npm"],
   }
 
   # install easy_install 
@@ -268,7 +280,7 @@ define keeper::install (
   exec { "keeper-pip-modules":
     command => "pip install -r ${settings::environmentpath}/${settings::environment}/data/keeper_files/pip-reqs.txt",
     path    => ["/bin", "/usr/bin", "/usr/local/bin", "/sbin"],
-    require => [ Exec["python-pip"] ],
+    require => [ Exec["python-pip"], Package["default-libmysqlclient-dev"] ],
   }
 
   $http_conf = $props['http']['__HTTP_CONF__']
