@@ -60,16 +60,13 @@ define keeper::install (
 
 
   #### MODULES
-  # install debian modules
   $deb_modules = [
     "lsb-release",
     "build-essential",
     "git-core",
-    #"openjdk-7-jre",
     "openjdk-8-jre",
     "python2.7",
     "poppler-utils",
-    #"python-imaging",
     "python-pil",
     "python-mysqldb", 
     "python-memcache",
@@ -88,32 +85,40 @@ define keeper::install (
     "python-wstools",
     "libfreetype6-dev",
     "monitoring-plugins",
-    # keeper 
-    "nodejs",
     "python-apt",
     "python-debian",
     "python-debianbts",
     "python-defusedxml", 
     "python-soappy",
     "libffi-dev",
-    "libssl-dev",
     "libldap2-dev",
-    "default-libmysqlclient-dev",
     ]      
   package { $deb_modules:
     ensure => latest,
   }
-  
+ 
+  package { "requirejs":
+    ensure   => latest,
+    provider => "npm",
+    require  => [ Package["nodejs-dev"], Package["npm"] ],
+  }
+
   package { "npm":
     ensure => latest,
-    require  => Package["nodejs"],
+    require  => Package["nodejs-dev"],
   }
-  
-  package { "requirejs":
-    ensure   => "present",
-    provider => "npm",
-    require  => Package["npm"],
+
+  package { "nodejs-dev":
+    ensure => latest,
+    require  => Package["libssl1.0-dev"],
   }
+
+  package { "libssl1.0-dev":
+    ensure => latest,
+  }
+
+ 
+
 
   # install easy_install 
   package { "python-setuptools":
@@ -282,6 +287,12 @@ define keeper::install (
     path    => ["/bin", "/usr/bin", "/usr/local/bin", "/sbin"],
     require => [ Exec["python-pip"], Package["default-libmysqlclient-dev"] ],
   }
+
+  # install debian modules
+  package { "default-libmysqlclient-dev":
+    ensure => latest,
+  }
+
 
   $http_conf = $props['http']['__HTTP_CONF__']
   #exec { 'enable_keeper_nginx_conf':
