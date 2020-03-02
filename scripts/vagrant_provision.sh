@@ -8,7 +8,13 @@ apt-get -y install git zsh vim-nox
 chsh -s $(which zsh)
 sh -c "$(wget https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -)"
 sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="agnoster"/g' /root/.zshrc
-echo "PATH=$PATH:/opt/puppetlabs/bin" >> /root/.zshrc
+echo "PATH=$PATH:/opt/puppetlabs/bin
+SEAFILE_DIR=/opt/seafile
+hash -d seafile=\$SEAFILE_DIR
+hash -d logs=\$SEAFILE_DIR/logs
+hash -d latest=\$SEAFILE_DIR/seafile-server-latest
+hash -d ext=\$SEAFILE_DIR/KEEPER/seafile_keeper_ext" >> /root/.zshrc
+git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && ~/.fzf/install --all
 rm -rf /etc/puppet/auth.conf
 rm -rf /etc/puppet/hiera.yaml
 rm -rf /etc/puppet/puppet.conf
@@ -19,6 +25,7 @@ echo 'Defaults        secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr
 gem install inifile
 puppet module install puppetlabs-mysql
 puppet module install puppet-archive
+puppet module install puppet-nodejs
 puppet module install puppetlabs-apt
 puppet module install puppetlabs-stdlib
 puppet module install puppetlabs-inifile
