@@ -277,6 +277,14 @@ define keeper::install (
     provider => git,
     source   => 'https://github.com/MPDL/KEEPER.git',
     revision => "${props['release']['__GIT_REVISION__']}",
+    *        => $attr,
+  }
+  
+  file { "${seafile_root}/KEEPER" :
+    ensure  => directory,
+    recurse => true,
+    *       => $attr,
+    require =>  Vcsrepo["${seafile_root}/KEEPER"],
   }
 
   $keeper_ext = "${seafile_root}/KEEPER/seafile_keeper_ext"
