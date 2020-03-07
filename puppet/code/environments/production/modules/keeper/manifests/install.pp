@@ -92,6 +92,9 @@ define keeper::install (
     "python-soappy",
     "libffi-dev",
     "libldap2-dev",
+    # dev
+    "phpmyadmin",
+    "php7.2-fpm"
     ]      
   package { $deb_modules:
     ensure => latest,
@@ -176,6 +179,13 @@ define keeper::install (
     require => [ Apt::Source['nginx_repo'], Class['apt::update'] ]
   }
 
+  file { "/run/php/php7.2-fpm.sock":
+    ensure  => present,
+    owner   => "nginx",
+    group   => "nginx",
+    require =>  [ Package["php7.2-fpm"], Package["nginx"] ] ,
+  }
+
   ###### SEAFILE
 
   # set owner:group to root dir recursively
@@ -234,6 +244,11 @@ define keeper::install (
   }
 
 
+  dirtree { 'keeper log directory':
+    ensure  => present,
+    path    => "${props['logging']['__KEEPER_LOG_DIR__']}",
+    parents => true,
+  }
 
 
   # install seafile for mysql in non-interactive mode 
@@ -378,7 +393,7 @@ define keeper::install (
     ensure          => running,
     hasrestart      => true,
     enable          => true,
-    require => [ Package['nginx'] ],
+    require => [ Package['nginx'], Package['apache2'] ],
   }
 
 
@@ -407,6 +422,16 @@ define keeper::install (
     ensure => absent,
   }
 
+  # remove apache
+  $apache2 = [
+    "apache2",
+    "apache2-bin",
+    "apache2-data",
+    "libapache2-mod-php7.2",
+  ]
+  package { $apache2:
+    ensure => absent,
+  }
 
 }
 
