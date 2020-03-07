@@ -47,14 +47,9 @@ Vagrant.configure("2") do |config|
   # argument is a set of non-required options.
   #config.vm.synced_folder ".", "/vagrant", disabled: true
   config.vm.synced_folder "./puppet", "/etc/puppet"
-  #config.vm.synced_folder "/media/VOLB/Projects/KEEPER/18.04/seafile", "/opt/seafile", type: "nfs"
-  #config.nfs.map_gid = 1001 
-  #config.nfs.map_uid = 1001 
-  config.vm.synced_folder "/media/VOLB/Projects/KEEPER/18.04/seafile", "/opt/seafile", 
+  config.vm.synced_folder "/opt/seafile", "/opt/seafile", 
     type: "nfs_guest",
-    #type: "nfs",
     linux__nfs_options: ['rw', 'no_subtree_check', 'no_root_squash', 'insecure']
-
 
   # Provider-specific configuration so you can fine-tune various
   # backing providers for Vagrant. These expose provider-specific options.
