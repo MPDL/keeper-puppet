@@ -40,13 +40,13 @@ class keeper::db (
 
   # puppet module install puppetlabs-mysql 
   # mariadb-server
-  class { '::mysql::server':
-      package_name            => 'mariadb-server',
-      package_ensure          => "${pkgs['mariadb-server']}",
-      service_name            => 'mysql',
-      root_password           => "${db['__DB_ROOT_PASSWORD__']}",
-      require                 => [Exec["apt-update"]],
-  }
+  #class { '::mysql::server':
+  #    package_name            => 'mariadb-server',
+  #    package_ensure          => "${pkgs['mariadb-server']}",
+  #    service_name            => 'mysql',
+  #    root_password           => "${db['__DB_ROOT_PASSWORD__']}",
+  #   require                 => [Exec["apt-update"]],
+  #}
 
   #Apt::Source['mariadb'] ~>
   #Class['apt::update'] ->
@@ -64,38 +64,38 @@ class keeper::db (
   #Class['::mysql::client']
 
   # seafile dbs 
-  mysql::db { ['ccnet-db', 'seafile-db', 'seahub-db'] :
-    user     => "${db['__DB_USER__']}",
-    password => "${db['__DB_PASSWORD__']}",
-    host     => 'localhost',
-    charset  => 'utf8',
-    grant    => ['ALL'],
-  }
+  #mysql::db { ['ccnet-db', 'seafile-db', 'seahub-db'] :
+  #  user     => "${db['__DB_USER__']}",
+  #  password => "${db['__DB_PASSWORD__']}",
+  #  host     => 'localhost',
+  #  charset  => 'utf8',
+  #  grant    => ['ALL'],
+  #}
 
   # keeper db
-  mysql::db { 'keeper-db':
-    user     => "${db['__DB_USER__']}",
-    password => "${db['__DB_PASSWORD__']}",
-    host     => 'localhost',
-    charset  => 'utf8',
-    grant    => ['ALL'],
-  }
+  #mysql::db { 'keeper-db':
+  #  user     => "${db['__DB_USER__']}",
+  #  password => "${db['__DB_PASSWORD__']}",
+  #  host     => 'localhost',
+  #  charset  => 'utf8',
+  #  grant    => ['ALL'],
+  #}
 
-  $log_bin = $db['__LOG_BIN__']
+  #$log_bin = $db['__LOG_BIN__']
   # create bin log dir
-  exec { "create_${log_bin}":
-    command => "mkdir -p ${log_bin}",
-    path    => ["/bin", "/usr/bin", "/usr/local/bin", "/sbin"],
-    creates => "${log_bin}",
-    require => [ Class['::mysql::server'] ]
-  }
+  #exec { "create_${log_bin}":
+  #  command => "mkdir -p ${log_bin}",
+  #  path    => ["/bin", "/usr/bin", "/usr/local/bin", "/sbin"],
+  #  creates => "${log_bin}",
+  #  require => [ Class['::mysql::server'] ]
+  #}
 
-  file { "${log_bin}":
-    ensure  => directory,
-    owner   => 'mysql',
-    group   => 'mysql',
-    require => [ Exec["create_${log_bin}"] ]
-  }
+  #file { "${log_bin}":
+  #  ensure  => directory,
+  #  owner   => 'mysql',
+  #  group   => 'mysql',
+  #  require => [ Exec["create_${log_bin}"] ]
+  #}
 
 
 }

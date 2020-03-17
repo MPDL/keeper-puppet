@@ -4,7 +4,7 @@ wget https://apt.puppetlabs.com/puppet5-release-bionic.deb
 sudo dpkg -i --force-all puppet5-release-bionic.deb
 rm -rf puppet5-release-bionic.deb
 sudo apt update
-apt-get -y install git zsh vim-nox netplan
+apt-get -y install git zsh vim-nox netplan.io
 chsh -s $(which zsh)
 sh -c "$(wget https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -)"
 sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="agnoster"/g' /root/.zshrc

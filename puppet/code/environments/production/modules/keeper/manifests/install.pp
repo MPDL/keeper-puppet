@@ -9,6 +9,7 @@
 #) inherits keeper::params {
 define keeper::install (
   Hash $node_props = {},
+  Hash $node_defaults = {}
 ){
 
   include keeper::params 
@@ -16,7 +17,12 @@ define keeper::install (
   $seafile_root = $keeper::params::seafile_root 
   $seafile_ver = $keeper::params::seafile_ver 
   $attr = $keeper::params::attr 
-  $ini_defaults = $keeper::params::defaults
+  if $node_defaults['path'] {
+    $ini_defaults = $node_defaults
+  }
+  else {
+    $ini_defaults = $keeper::params::defaults
+  }
   $props = $keeper::params::props
   $db = $props['db'] 
   $pkgs = $props['package-deps'] 
@@ -362,7 +368,7 @@ define keeper::install (
   exec { 'create_keeper_tables':
     command  => "/bin/bash -c \"\\$(mysql -s -N --user=${db['__DB_USER__']} --password=${db['__DB_PASSWORD__']} --database=keeper-db < ${seafile_root}/seafile-server-latest/seahub/keeper/keeper-db.sql)\"",
     path     => ["/usr/bin", "/bin"],
-    require => [ Mysql::Db['keeper-db'], Exec['keeper-deploy-all'] ],
+    require => [ Exec['keeper-deploy-all'] ],
   }
 
 
@@ -401,25 +407,12 @@ define keeper::install (
     ensure     => running,
     enable     => true,
     hasrestart => true,
-    require    => [ Service['memcached'], Service['nginx'], Service['mysqld'] ], 
+    require    => [ Service['memcached'], Service['nginx'] ], 
   }
 
   exec { 'restart_nginx':
     command     => '/bin/systemctl restart nginx',
     require     => Service['keeper']
-  }
-
-  # remove python3 
-  $python3 = [
-    "python3",
-    "python3-minimal",
-    "python3.6",
-    "python3.6-minimal",
-    "distro-info-data",
-    "libpython3-stdlib",
-  ]
-  package { $python3:
-    ensure => absent,
   }
 
   # remove apache
@@ -450,8 +443,15 @@ class keeper::install::single {
       #} 
   }
 
+  $node_defaults = {
+    'path'              => "${seafile_root}/keeper-single.ini",
+    'key_val_separator' => '=',
+  }
+
+
   keeper::install { 'single': 
     node_props => $node_props,  
+    node_defaults => $node_defaults,
   }
 
 }
@@ -461,8 +461,15 @@ class keeper::install::app01 {
 
   $node_props = {}
 
+  $node_defaults = {
+    'path'              => "${seafile_root}/app01-qa-keeper.ini",
+    'key_val_separator' => '=',
+  }
+
+
   keeper::install { 'app01': 
     node_props => $node_props,  
+    node_defaults => $node_defaults,
   }
 
 }
@@ -472,8 +479,15 @@ class keeper::install::app02 {
   #$node_props = {'global' => { '__GPFS_FILESET__' => 'keeper-fileset' } }
   $node_props = {}
 
+  $node_defaults = {
+    'path'              => "${seafile_root}/app02-qa-keeper.ini",
+    'key_val_separator' => '=',
+  }
+
+
   keeper::install { 'app02': 
     node_props => $node_props,  
+    node_defaults => $node_defaults,
   }
 
 }
@@ -483,11 +497,72 @@ class keeper::install::app03 {
   #$node_props = {'global' => { '__GPFS_FILESET__' => 'keeper-fileset' } }
   $node_props = {}
 
+  $node_defaults = {
+    'path'              => "${seafile_root}/app03-qa-keeper.ini",
+    'key_val_separator' => '=',
+  }
+
+
   keeper::install { 'app03': 
     node_props => $node_props,  
+    node_defaults => $node_defaults,
   }
 
 }
+
+class keeper::install::app04 {
+  include keeper::params
+
+  #$node_props = {'global' => { '__GPFS_FILESET__' => 'keeper-fileset' } }
+  $node_props = {}
+
+  $node_defaults = {
+    'path'              => "${seafile_root}/app04-qa-keeper.ini",
+    'key_val_separator' => '=',
+  }
+
+  keeper::install { 'app04':
+    node_props => $node_props,
+    node_defaults => $node_defaults,
+  }
+
+}
+
+class keeper::install::app05 {
+  include keeper::params
+
+  #$node_props = {'global' => { '__GPFS_FILESET__' => 'keeper-fileset' } }
+  $node_props = {}
+
+  $node_defaults = {
+    'path'              => "${seafile_root}/app05-qa-keeper.ini",
+    'key_val_separator' => '=',
+  }
+
+  keeper::install { 'app05':
+    node_props => $node_props,
+    node_defaults => $node_defaults,
+  }
+
+}
+class keeper::install::app06 {
+  include keeper::params
+
+  #$node_props = {'global' => { '__GPFS_FILESET__' => 'keeper-fileset' } }
+  $node_props = {}
+
+  $node_defaults = {
+    'path'              => "${seafile_root}/app06-qa-keeper.ini",
+    'key_val_separator' => '=',
+  }
+
+  keeper::install { 'app06':
+    node_props => $node_props,
+    node_defaults => $node_defaults,
+  }
+
+}
+
 
 class keeper::install::back {
   include keeper::params
