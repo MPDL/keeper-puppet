@@ -226,6 +226,53 @@ define keeper::install (
     *      => $attr,
   }
 
+  $ini_memcached = regsubst("${props['memcached']['__MEMCACHED_KA_UNICAST_PEERS__']}", "\n", "\\n", 'G')
+
+  ini_setting {'memcached escape newline':
+        ensure  => present,
+        section => 'memcached',
+        path => "${ini_defaults['path']}",
+        setting => '__MEMCACHED_KA_UNICAST_PEERS__',
+        value => "${ini_memcached}",
+  }
+
+  
+  ini_setting {'nodes quotes':
+        ensure  => present,
+        section => 'global',
+        path => "${ini_defaults['path']}",
+        setting => '__CLUSTER_NODES__',
+	value => "\"${props['global']['__CLUSTER_NODES__']}\"",
+  }
+
+  ini_setting {'secret key quotes':
+        ensure  => present,
+        section => 'global',
+        path => "${ini_defaults['path']}",
+        setting => '__SECRET_KEY__',
+        value => "\"${props['global']['__SECRET_KEY__']}\"",
+  }
+
+  ini_setting {'remote log quotes':
+        ensure  => present,
+        section => 'backup',
+        path => "${ini_defaults['path']}",
+        setting => '__REMOTE_LOG__',
+        value => "\"${props['backup']['__REMOTE_LOG__']}\"",
+  }
+
+
+#  ini_subsetting {'nodes quotes':
+#        ensure  => present,
+#        section => 'global',
+#        path => "${ini_defaults['path']}",
+#        setting => '__CLUSTER_NODES__',
+#        subsetting => "${props['http']['__NODE_FQDN__']}",
+#        value => '10',
+#        quote_char => '"',
+#  }
+
+
 
 
   # should be set for correct work of document preview 
@@ -256,18 +303,66 @@ define keeper::install (
     parents => true,
   }
 
+  if $props['backend']['__GPFS_DEVICE__'] {
+    # This section runs when the GPFS_DEVICE is defined, mainly in QA and PROD
+    file { [ "${seafile_root}/ccnet", "${seafile_root}/pids", "${seafile_root}/seahub-data", "${seafile_root}/pro-data", "${seafile_root}/conf" ]:
+      ensure => directory,
+      *      => $attr,
+      force => true,
+    }
 
-  # install seafile for mysql in non-interactive mode 
-  # see https://manual.seafile.com/deploy/using_mysql.html#setup-in-non-interactive-way
-  # NOTE: DBs have been already created in mariadb.pp!!!
-  exec { 'setup-seafile-mysql.sh':
-    command      => "setup-seafile-mysql.sh auto -n ${props['http']['__SERVER_NAME__']} -i ${props['http']['__NODE_FQDN__']} -d ${seafile_root}/seafile-data -e 1 -t ${db['__DB_PORT__']} -u ${db['__DB_USER__']} -w ${db['__DB_PASSWORD__']} -c ccnet-db -s seafile-db -b seahub-db",
-    path         => ["${seafile_root}/${seafile_ver}", "/usr/bin", "/usr/local/bin", "/bin"],
-    cwd          => "${seafile_root}/${seafile_ver}",
-    creates      => "${seafile_root}/seafile-data",
-    require => [ Archive["${seafile_arch}"] ],
-    logoutput =>  true,
+    file { "${seafile_root}/ccnet/mykey.peer":
+      *      => $attr,
+      source  => "${settings::environmentpath}/${settings::environment}/data/keeper_files/mykey.peer",
+      require => [ File["${seafile_root}/ccnet"] ],
+    }
+
+    file { "${seafile_root}/ccnet/seafile.ini":
+      *      => $attr,
+      content => "${seafile_root}/seafile-data",
+    }
+      
+    file { "${seafile_root}/seafile-data":
+      ensure => link,
+      target => "/keeper/seafile-data",
+      force => true,
+      * => $attr,
+    }
+
+    file { "${seafile_root}/seafile-server-latest":
+      ensure => link,
+      target => "${seafile_root}/${props['global']['__SEAFILE_SERVER_LATEST_DIR__']}",
+      force => true,
+      * => $attr,
+      require => Archive["$seafile_arch"],
+    }
+ 
+    exec { 'setup-seafile-mysql.sh':
+      command => "/bin/echo 'skipping setup-seafile-mysql.sh'",
+      require => [ File["${seafile_root}/seafile-server-latest"], File["${seafile_root}/ccnet"], File["${seafile_root}/pids"], File["${seafile_root}/seahub-data"], File["${seafile_root}/pro-data"], File["${seafile_root}/conf"], File["${seafile_root}/ccnet/mykey.peer"], File["${seafile_root}/ccnet/seafile.ini"], File["${seafile_root}/seafile-data"] ],
+    }
   }
+  else {
+    # install seafile for mysql in non-interactive mode
+    # see https://manual.seafile.com/deploy/using_mysql.html#setup-in-non-interactive-way
+    # NOTE: DBs have been already created in mariadb.pp!!!
+    exec { 'setup-seafile-mysql.sh':
+      command      => "setup-seafile-mysql.sh auto -n ${props['http']['__SERVER_NAME__']} -i ${props['http']['__NODE_FQDN__']} -d ${seafile_root}/seafile-data -e 1 -o ${db['__DB_HOST__']} -t ${db['__DB_PORT__']} -u ${db['__DB_USER__']} -w ${db['__DB_PASSWORD__']} -c ccnet-db -s seafile-db -b seahub-db",
+      path         => ["${seafile_root}/${seafile_ver}", "/usr/bin", "/usr/local/bin", "/bin"],
+      cwd          => "${seafile_root}/${seafile_ver}",
+      creates      => "${seafile_root}/seafile-data",
+      require => [ Archive["${seafile_arch}"] ],
+      logoutput =>  true,
+    }
+
+    file { "${seafile_root}/seafile-data" :
+      ensure  => directory,
+      *       => $attr,
+      require => Exec['setup-seafile-mysql.sh'],
+    }
+  }
+
+
 
   
   # Create server admin after first seahub start
@@ -284,11 +379,6 @@ define keeper::install (
     require => [ File["${seafile_root}/conf/admin.txt"] ],
   }
 
-  file { "${seafile_root}/seafile-data" :
-    ensure  => directory,
-    *       => $attr,
-    require => Exec['setup-seafile-mysql.sh'] ,
-  }
 
   #### KEEPER
 
@@ -461,8 +551,10 @@ class keeper::install::app01 {
 
   $node_props = {}
 
+  $seafile_root = $keeper::params::seafile_root
+
   $node_defaults = {
-    'path'              => "${seafile_root}/app01-qa-keeper.ini",
+    'path'              => "${seafile_root}/keeper-app01-qa.ini",
     'key_val_separator' => '=',
   }
 
@@ -476,11 +568,13 @@ class keeper::install::app01 {
 class keeper::install::app02 {
   include keeper::params
 
+  $seafile_root = $keeper::params::seafile_root
+
   #$node_props = {'global' => { '__GPFS_FILESET__' => 'keeper-fileset' } }
   $node_props = {}
 
   $node_defaults = {
-    'path'              => "${seafile_root}/app02-qa-keeper.ini",
+    'path'              => "${seafile_root}/keeper-app02-qa.ini",
     'key_val_separator' => '=',
   }
 
@@ -494,11 +588,13 @@ class keeper::install::app02 {
 class keeper::install::app03 {
   include keeper::params
 
+  $seafile_root = $keeper::params::seafile_root
+
   #$node_props = {'global' => { '__GPFS_FILESET__' => 'keeper-fileset' } }
   $node_props = {}
 
   $node_defaults = {
-    'path'              => "${seafile_root}/app03-qa-keeper.ini",
+    'path'              => "${seafile_root}/keeper-app03-qa.ini",
     'key_val_separator' => '=',
   }
 
@@ -513,11 +609,13 @@ class keeper::install::app03 {
 class keeper::install::app04 {
   include keeper::params
 
+  $seafile_root = $keeper::params::seafile_root
+
   #$node_props = {'global' => { '__GPFS_FILESET__' => 'keeper-fileset' } }
   $node_props = {}
 
   $node_defaults = {
-    'path'              => "${seafile_root}/app04-qa-keeper.ini",
+    'path'              => "${seafile_root}/keeper-app04-qa.ini",
     'key_val_separator' => '=',
   }
 
@@ -531,11 +629,13 @@ class keeper::install::app04 {
 class keeper::install::app05 {
   include keeper::params
 
+  $seafile_root = $keeper::params::seafile_root
+
   #$node_props = {'global' => { '__GPFS_FILESET__' => 'keeper-fileset' } }
   $node_props = {}
 
   $node_defaults = {
-    'path'              => "${seafile_root}/app05-qa-keeper.ini",
+    'path'              => "${seafile_root}/keeper-app05-qa.ini",
     'key_val_separator' => '=',
   }
 
@@ -548,11 +648,13 @@ class keeper::install::app05 {
 class keeper::install::app06 {
   include keeper::params
 
+  $seafile_root = $keeper::params::seafile_root
+
   #$node_props = {'global' => { '__GPFS_FILESET__' => 'keeper-fileset' } }
   $node_props = {}
 
   $node_defaults = {
-    'path'              => "${seafile_root}/app06-qa-keeper.ini",
+    'path'              => "${seafile_root}/keeper-app06-qa.ini",
     'key_val_separator' => '=',
   }
 
@@ -567,6 +669,8 @@ class keeper::install::app06 {
 class keeper::install::back {
   include keeper::params
 
+  $seafile_root = $keeper::params::seafile_root
+
   $node_props = {
     'global' => { 
       '__NODE_TYPE__' => 'BACKGROUND', 
@@ -577,9 +681,18 @@ class keeper::install::back {
     'office' => { '__IS_OFFICE_CONVERTOR_NODE__' => 'true' },
   }
 
+  $node_defaults = {
+    'path'              => "${seafile_root}/keeper-app-bg02-qa.ini",
+    'key_val_separator' => '=',
+  }
+
+
   keeper::install { 'back': 
     node_props => $node_props,  
+    node_defaults => $node_defaults,
   }
 
 }
+
+
 
