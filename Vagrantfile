@@ -6,7 +6,7 @@
 # backwards compatibility). Please don't change it unless you know what
 # you're doing.
 
-SEAFILE_DIR_HOST = "/media/VOLB/Projects/KEEPER/18.04/seafile"
+SEAFILE_DIR_HOST = "../seafile"
 SEAFILE_DIR_GUEST = "/opt/seafile"
 
 Vagrant.configure("2") do |config|
@@ -51,7 +51,6 @@ Vagrant.configure("2") do |config|
   # argument is a set of non-required options.
   #config.vm.synced_folder ".", "/vagrant", disabled: true
   config.vm.synced_folder "./puppet", "/etc/puppet"
-  #config.vm.synced_folder "/opt/seafile", "/opt/seafile", 
   config.vm.synced_folder SEAFILE_DIR_HOST, SEAFILE_DIR_GUEST,
     type: "nfs_guest",
     linux__nfs_options: ['rw', 'no_subtree_check', 'no_root_squash', 'insecure']

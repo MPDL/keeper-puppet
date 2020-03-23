@@ -66,14 +66,10 @@ define keeper::install (
     "git-core",
     "openjdk-8-jre",
 
-    #"python2.7",
-
-
     "python3",
     "python3-setuptools",
     "python3-pip",
     "python3-ldap",
-
 
     "poppler-utils",
     "python-pil",
@@ -102,7 +98,7 @@ define keeper::install (
     "libffi-dev",
     "libldap2-dev",
     # dev
-    "phpmyadmin",
+    #"phpmyadmin",
     #"php7.2-fpm"
     ]      
   package { $deb_modules:
@@ -154,7 +150,17 @@ define keeper::install (
       #logoutput =>  true,
     #}
   #}
-  $pip_modules = ["Pillow", "pylibmc", "captcha", "django-pylibmc", "jinja2", "sqlalchemy", "psd-tools", "django-simple-captcha"]     
+  $pip_modules = [
+    "Pillow", 
+    "pylibmc", 
+    "captcha", 
+    "django-pylibmc", 
+    "jinja2", 
+    "sqlalchemy", 
+    "psd-tools", 
+    "django-simple-captcha",
+    "configparser",
+    ]     
   each($pip_modules) |$m| {
     exec { "pip-${m}":
       command => "pip3 install --timeout=3600 ${m}",
@@ -163,6 +169,29 @@ define keeper::install (
       #unless  => "pip show ${m}",
       logoutput =>  true,
     }
+  }
+  
+  alternative_entry { '/usr/bin/python3.6':
+    ensure  => present,
+    altlink => '/usr/bin/python',
+    altname => 'python',
+    priority => 10,
+    require => Package['python3'],
+  }
+
+  alternatives { 'python':
+    path => '/usr/bin/python3.6',
+    require => Package['python3'],
+  }
+
+  # remove python2 
+  $python2 = [
+    "python2",
+    "python2-minimal",
+  ]
+  package { $python2:
+    ensure => absent,
+    require => Alternatives["python"],
   }
 
 
@@ -343,7 +372,7 @@ define keeper::install (
     logoutput =>  true,
   }
 
-  file { '/etc/nginx/sites-enabled': 
+  file { ['/etc/nginx/sites-enabled', '/etc/nginx/sites-available']: 
     ensure => directory,
     require => [ Package['nginx'] ],
   }
@@ -427,18 +456,6 @@ define keeper::install (
     require     => Service['keeper']
   }
 
-  # remove python3 
-  $python3 = [
-    "python3",
-    "python3-minimal",
-    "python3.6",
-    "python3.6-minimal",
-    "distro-info-data",
-    "libpython3-stdlib",
-  ]
-  #package { $python3:
-    #ensure => absent,
-  #}
 
   # remove apache
   $apache2 = [
