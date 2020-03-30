@@ -83,8 +83,6 @@ define keeper::install (
     "memcached",
     "libmemcached-dev",
     "zlib1g-dev",
-    "python-netaddr",
-    "python-templayer",
     "python-pyrex",
     "python-chardet",
     "python-wstools",
@@ -97,6 +95,11 @@ define keeper::install (
     "python-soappy",
     "libffi-dev",
     "libldap2-dev",
+    "default-libmysqlclient-dev",
+    # nodejs
+    "nodejs",
+    "npm"
+    "nodejs-dev"
     # dev
     #"phpmyadmin",
     #"php7.2-fpm"
@@ -156,10 +159,13 @@ define keeper::install (
     "captcha", 
     "django-pylibmc", 
     "jinja2", 
-    "sqlalchemy", 
+    #"sqlalchemy", 
     "psd-tools", 
     "django-simple-captcha",
     "configparser",
+    "netaddr",
+    "paramiko",
+    "mysqlclient",
     ]     
   each($pip_modules) |$m| {
     exec { "pip-${m}":
@@ -356,11 +362,6 @@ define keeper::install (
     #path    => ["/bin", "/usr/bin", "/usr/local/bin", "/sbin"],
     #require => [ Exec["python-pip"], Package["default-libmysqlclient-dev"] ],
   #}
-
-  # install debian modules
-  package { "default-libmysqlclient-dev":
-    ensure => latest,
-  }
 
 
   $http_conf = $props['http']['__HTTP_CONF__']
