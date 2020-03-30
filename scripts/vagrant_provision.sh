@@ -3,12 +3,12 @@
 wget https://apt.puppetlabs.com/puppet5-release-bionic.deb
 dpkg -i --force-all puppet5-release-bionic.deb
 rm -rf puppet5-release-bionic.deb
+curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
 apt update
-apt-get -y install git tig zsh vim-nox neovim tmux
+apt -y install git tig zsh vim-nox neovim tmux
 chsh -s $(which zsh)
 sh -c "$(wget https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -)"
 sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="agnoster"/g' /root/.zshrc
-
 echo "PATH=\$PATH:/opt/puppetlabs/bin
 SEAFILE_DIR=/opt/seafile
 hash -d seafile=\$SEAFILE_DIR
