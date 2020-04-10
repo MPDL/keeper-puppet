@@ -159,13 +159,14 @@ define keeper::install (
     "captcha", 
     "django-pylibmc", 
     "jinja2", 
-    #"sqlalchemy", 
     "psd-tools", 
     "django-simple-captcha",
     "configparser",
     "netaddr",
     "paramiko",
     "mysqlclient",
+    "uwsgi",
+    "pytest",
     ]     
   each($pip_modules) |$m| {
     exec { "pip-${m}":
