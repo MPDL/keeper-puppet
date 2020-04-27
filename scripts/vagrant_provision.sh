@@ -52,7 +52,7 @@ zplug load # --verbose
 ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=243'" >> /root/.zshrc
 curl -sL --proto-redir -all,https https://raw.githubusercontent.com/zplug/installer/master/installer.zsh | zsh
 git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && ~/.fzf/install --all
-curl -LO https://github.com/BurntSushi/ripgrep/releases/download/11.0.2/ripgrep_11.0.2_amd64.deb && dpkg -i ripgrep_11.0.2_amd64.deb && rm ripgrep_11.0.2_amd64.deb
+curl -LO https://github.com/BurntSushi/ripgrep/releases/download/12.0.1/ripgrep_12.0.1_amd64.deb && dpkg -i ripgrep_12.0.1_amd64.deb && rm -f ripgrep_*.deb
 curl -fLo ~/.vim/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
 
 rm -rf /etc/puppet/auth.conf
