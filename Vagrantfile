@@ -51,9 +51,9 @@ Vagrant.configure("2") do |config|
   # argument is a set of non-required options.
   #config.vm.synced_folder ".", "/vagrant", disabled: true
   config.vm.synced_folder "./puppet", "/etc/puppet"
-  config.vm.synced_folder SEAFILE_DIR_HOST, SEAFILE_DIR_GUEST,
-    type: "nfs_guest",
-    linux__nfs_options: ['rw', 'no_subtree_check', 'no_root_squash', 'insecure']
+  #config.vm.synced_folder SEAFILE_DIR_HOST, SEAFILE_DIR_GUEST,
+    #type: "nfs_guest",
+    #linux__nfs_options: ['rw', 'no_subtree_check', 'no_root_squash', 'insecure']
 
   # Provider-specific configuration so you can fine-tune various
   # backing providers for Vagrant. These expose provider-specific options.
@@ -86,7 +86,7 @@ Vagrant.configure("2") do |config|
   # SHELL
   config.vm.provision "shell", path: "scripts/vagrant_provision.sh"
   config.vm.provider "virtualbox" do |v|
-        v.memory = 3072 
+        v.memory = 4096 
         #v.memory = 1024
         v.cpus = 2
   end
