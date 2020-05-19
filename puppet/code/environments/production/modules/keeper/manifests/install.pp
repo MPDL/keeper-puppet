@@ -454,9 +454,11 @@ define keeper::install (
     #require => [ Exec["keeper-deploy-all"] ]
   #}
 
-  # create mysql keeper tables
-  exec { 'create_keeper_tables':
+  # create mysql keeper database and tables
+  # onlyif not exists
+  exec { 'create_keeper_database':
     command  => "/bin/bash -c \"\\$(mysql -s -N --user=${db['__DB_USER__']} --password=${db['__DB_PASSWORD__']} --database=keeper-db < ${seafile_root}/seafile-server-latest/seahub/keeper/keeper-db.sql)\"",
+    onlyif  => "/bin/bash -c \"[ -z \\$(mysql -s -N --user=${db['__DB_USER__']} --password=${db['__DB_PASSWORD__']} -e \\\"SELECT 1 FROM information_schema.schemata WHERE schema_name='keeper-db'\\\") ];\"",
     path     => ["/usr/bin", "/bin"],
     require => [ Exec['keeper-deploy-all'] ],
   }
