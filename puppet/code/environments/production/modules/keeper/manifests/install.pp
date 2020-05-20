@@ -65,41 +65,23 @@ define keeper::install (
     "build-essential",
     "git-core",
     "openjdk-8-jre",
-
     "python3",
     "python3-setuptools",
     "python3-pip",
-    "python3-ldap",
-
     "poppler-utils",
-    "python-pil",
-    "python-mysqldb", 
-    "python-memcache",
-    "python-ldap",
-    "python-urllib3",
     "clamav",
     "gettext",
-    "python-dev",
     "memcached",
     "libmemcached-dev",
     "zlib1g-dev",
-    "python-pyrex",
-    "python-chardet",
-    "python-wstools",
     "libfreetype6-dev",
     "monitoring-plugins",
-    "python-apt",
-    "python-debian",
-    "python-debianbts",
-    "python-defusedxml", 
-    "python-soappy",
     "libffi-dev",
     "libldap2-dev",
     "default-libmysqlclient-dev",
+    "libssl1.0-dev",
     # nodejs
     "nodejs",
-    "npm"
-    "nodejs-dev"
     # dev
     #"phpmyadmin",
     #"php7.2-fpm"
@@ -124,38 +106,10 @@ define keeper::install (
     require  => Package["libssl1.0-dev"],
   }
 
-  package { "libssl1.0-dev":
-    ensure => latest,
-  }
-
-  #install easy_install 
-  #package { "python3-setuptools":
-    #ensure => latest,
-  #}
-
-  # install pip      
-  #exec { "python-pip":
-    #command => "python /usr/lib/python2.7/dist-packages/easy_install.py pip",
-    #path    => ["/usr/bin", "/usr/local/bin", "/sbin"],
-    #require => Package["python-setuptools"],
-    #creates => '/usr/local/bin/pip',
-    #logoutput =>  true,
-  #}
-
-  ## install seafile pip modules
-  #$pip_modules = ["boto", "requests", "pylibmc", "django-pylibmc", ]     
-  #each($pip_modules) |$m| {
-    #exec { "pip-${m}":
-      #command => "pip install ${m}",
-      #path    => ["/usr/bin", "/usr/local/bin", "/sbin"],
-      #require => Exec["python-pip"],
-      #unless  => "pip show ${m}",
-      #logoutput =>  true,
-    #}
-  #}
   $pip_modules = [
     "Pillow", 
-    "pylibmc", 
+    "pylibmc",
+    "python3-ldap",
     "captcha", 
     "django-pylibmc", 
     "jinja2", 
@@ -166,6 +120,7 @@ define keeper::install (
     "paramiko",
     "mysqlclient",
     "uwsgi",
+    "mistune",
     "pytest",
     ]     
   each($pip_modules) |$m| {
