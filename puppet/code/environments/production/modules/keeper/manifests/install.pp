@@ -124,12 +124,12 @@ define keeper::install (
     exec { "pip-${m}":
       command =>   "pip3   install --timeout=3600 ${m}",
       path    => ["/usr/bin", "/usr/local/bin", "/sbin"],
-      require => [ Package["python3-pip"], Package["python3-setuptools"]],
+      require => [ Package["python3-pip"], Package["python3-setuptools"], Package["default-libmysqlclient-dev"]],
       #unless  => "pip show ${m}",
       logoutput =>  true,
     }
   }
-  
+
   alternative_entry { '/usr/bin/python3.6':
     ensure  => present,
     altlink => '/usr/bin/python',
