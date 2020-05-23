@@ -87,7 +87,6 @@ define keeper::install (
     "libldap2-dev",
     "default-libmysqlclient-dev",
     "libssl1.0-dev",
-    # nodejs
     "nodejs",
     # dev
     #"phpmyadmin",
@@ -100,17 +99,7 @@ define keeper::install (
   package { "requirejs":
     ensure   => latest,
     provider => "npm",
-    require  => [ Package["nodejs-dev"], Package["npm"] ],
-  }
-
-  package { "npm":
-    ensure => latest,
-    require  => Package["nodejs-dev"],
-  }
-
-  package { "nodejs-dev":
-    ensure => latest,
-    require  => Package["libssl1.0-dev"],
+    require  => [  Package["nodejs"] ],
   }
 
   $pip_modules = [
@@ -133,7 +122,7 @@ define keeper::install (
     ]     
   each($pip_modules) |$m| {
     exec { "pip-${m}":
-      command => "pip3 install --timeout=3600 ${m}",
+      command =>   "pip3   install --timeout=3600 ${m}",
       path    => ["/usr/bin", "/usr/local/bin", "/sbin"],
       require => [ Package["python3-pip"], Package["python3-setuptools"]],
       #unless  => "pip show ${m}",
@@ -195,12 +184,12 @@ define keeper::install (
     require => [ Apt::Source['nginx_repo'], Class['apt::update'] ]
   }
 
-  file { "/run/php/php7.2-fpm.sock":
-    ensure  => present,
-    owner   => "www-data",
-    group   => "www-data",
-    require =>  [ Package["php7.2-fpm"], Package["nginx"] ] ,
-  }
+  #file { "/run/php/php7.2-fpm.sock":
+  #  ensure  => present,
+  #  owner   => "www-data",
+  #  group   => "www-data",
+  #  require =>  [ Package["php7.2-fpm"], Package["nginx"] ] ,
+  #}
 
   ###### SEAFILE
 
@@ -326,12 +315,6 @@ define keeper::install (
       require => [ File["${seafile_root}/ccnet"] ],
     }
 
-    # no seafile.ini since 7.1.*
-    #file { "${seafile_root}/ccnet/seafile.ini":
-      #*      => $attr,
-      #content => "${seafile_root}/seafile-data",
-    #}
-
     file { "${seafile_root}/seafile-data":
       ensure => link,
       target => "/keeper/seafile-data",
@@ -349,7 +332,7 @@ define keeper::install (
  
     exec { 'setup-seafile-mysql.sh':
       command => "/bin/echo 'skipping setup-seafile-mysql.sh'",
-      require => [ File["${seafile_root}/seafile-server-latest"], File["${seafile_root}/ccnet"], File["${seafile_root}/pids"], File["${seafile_root}/seahub-data"], File["${seafile_root}/pro-data"], File["${seafile_root}/conf"], File["${seafile_root}/ccnet/mykey.peer"], File["${seafile_root}/ccnet/seafile.ini"], File["${seafile_root}/seafile-data"] ],
+      require => [ File["${seafile_root}/seafile-server-latest"], File["${seafile_root}/ccnet"], File["${seafile_root}/pids"], File["${seafile_root}/seahub-data"], File["${seafile_root}/pro-data"], File["${seafile_root}/conf"], File["${seafile_root}/ccnet/mykey.peer"], File["${seafile_root}/seafile-data"] ],
     }
   }
   else {
@@ -439,7 +422,8 @@ define keeper::install (
     command   => "./build.py deploy --all -y",
     path      => ["${keeper_ext}", "${seafile_root}/seafile-server-latest/seahub", "/bin", "/usr/bin", "/usr/local/bin", "/sbin", ],
     cwd       => "${keeper_ext}",
-    require   => [ Exec["keeper-pip-modules"], Exec['setup-seafile-mysql.sh'], Vcsrepo["${seafile_root}/KEEPER"], Package['nginx'] ],
+    # TODO: check pip module dependencies
+    require   => [ Exec['setup-seafile-mysql.sh'], Vcsrepo["${seafile_root}/KEEPER"], Package['nginx'] ],
     logoutput =>  true,
   }
 
@@ -459,8 +443,6 @@ define keeper::install (
     onlyif  => "/bin/bash -c \"[ -z \\$(mysql -s -N --user=${db['__DB_USER__']} --password=${db['__DB_PASSWORD__']} -e \\\"SELECT schema_name FROM information_schema.schemata WHERE schema_name='keeper-db'\\\") ];\"",
     path     => ["/usr/bin", "/bin"],
     require => Exec['keeper-deploy-all'],
-    #require => [ Mysql::Db['keeper-db'], Exec['keeper-deploy-all'] ],
-    #require => [ Mysql::Db['keeper-db'] ],
   }
 
 
