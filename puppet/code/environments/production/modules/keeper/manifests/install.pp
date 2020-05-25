@@ -47,7 +47,8 @@ define keeper::install (
   #override $clean_sections with $node_props
   $node_ini = deep_merge($clean_sections, $node_props)  
 
-  require keeper::db
+  #do not install db by default
+  #require keeper::db
 
   ##### USER / GROUP
   group { "${sys['__OS_GROUP__']}":
@@ -71,36 +72,25 @@ define keeper::install (
     "build-essential",
     "git-core",
     "openjdk-8-jre",
-    "python2.7",
+    "python3",
+    "python3-setuptools",
+    "python3-pip",
     "poppler-utils",
-    "python-pil",
-    "python-mysqldb", 
-    "python-memcache",
-    "python-ldap",
-    "python-urllib3",
     "clamav",
     "gettext",
-    "python-dev",
     "memcached",
     "libmemcached-dev",
     "zlib1g-dev",
-    "python-netaddr",
-    "python-templayer",
-    "python-pyrex",
-    "python-chardet",
-    "python-wstools",
     "libfreetype6-dev",
     "monitoring-plugins",
-    "python-apt",
-    "python-debian",
-    "python-debianbts",
-    "python-defusedxml", 
-    "python-soappy",
     "libffi-dev",
     "libldap2-dev",
+    "default-libmysqlclient-dev",
+    "libssl1.0-dev",
+    "nodejs",
     # dev
-    "phpmyadmin",
-    "php7.2-fpm"
+    #"phpmyadmin",
+    #"php7.2-fpm"
     ]      
   package { $deb_modules:
     ensure => latest,
@@ -109,51 +99,60 @@ define keeper::install (
   package { "requirejs":
     ensure   => latest,
     provider => "npm",
-    require  => [ Package["nodejs-dev"], Package["npm"] ],
+    require  => [  Package["nodejs"] ],
   }
 
-  package { "npm":
-    ensure => latest,
-    require  => Package["nodejs-dev"],
-  }
-
-  package { "nodejs-dev":
-    ensure => latest,
-    require  => Package["libssl1.0-dev"],
-  }
-
-  package { "libssl1.0-dev":
-    ensure => latest,
-  }
-
- 
-
-
-  # install easy_install 
-  package { "python-setuptools":
-    ensure => latest,
-  }
-
-  # install pip      
-  exec { "python-pip":
-    command => "python /usr/lib/python2.7/dist-packages/easy_install.py pip",
-    path    => ["/usr/bin", "/usr/local/bin", "/sbin"],
-    require => Package["python-setuptools"],
-    creates => '/usr/local/bin/pip',
-    logoutput =>  true,
-  }
-
-  # install seafile pip modules
-  $pip_modules = ["boto", "requests", "pylibmc", "django-pylibmc", ]     
+  $pip_modules = [
+    "Pillow", 
+    "pylibmc",
+    "python3-ldap",
+    "captcha", 
+    "django-pylibmc", 
+    "jinja2", 
+    "psd-tools", 
+    "django-simple-captcha",
+    "configparser",
+    "netaddr",
+    "paramiko",
+    "mysqlclient",
+    "sqlalchemy",
+    "uwsgi",
+    "mistune",
+    "pytest",
+    ]     
   each($pip_modules) |$m| {
     exec { "pip-${m}":
-      command => "pip install ${m}",
+      command =>   "pip3   install --timeout=3600 ${m}",
       path    => ["/usr/bin", "/usr/local/bin", "/sbin"],
-      require => Exec["python-pip"],
-      unless  => "pip show ${m}",
+      require => [ Package["python3-pip"], Package["python3-setuptools"] ],
+      #unless  => "pip show ${m}",
       logoutput =>  true,
     }
   }
+
+  alternative_entry { '/usr/bin/python3.6':
+    ensure  => present,
+    altlink => '/usr/bin/python',
+    altname => 'python',
+    priority => 10,
+    require => Package['python3'],
+  }
+
+  alternatives { 'python':
+    path => '/usr/bin/python3.6',
+    require => Package['python3'],
+  }
+
+  # remove python2 
+  $python2 = [
+    "python2",
+    "python2-minimal",
+  ]
+  package { $python2:
+    ensure => absent,
+    require => Alternatives["python"],
+  }
+
 
   # Office/PDF Document Preview for BACKGROUND node
   #if $props['global']['__NODE_TYPE__'] in ['SINGLE', 'BACKGROUND'] {
@@ -185,12 +184,12 @@ define keeper::install (
     require => [ Apt::Source['nginx_repo'], Class['apt::update'] ]
   }
 
-  file { "/run/php/php7.2-fpm.sock":
-    ensure  => present,
-    owner   => "nginx",
-    group   => "nginx",
-    require =>  [ Package["php7.2-fpm"], Package["nginx"] ] ,
-  }
+  #file { "/run/php/php7.2-fpm.sock":
+  #  ensure  => present,
+  #  owner   => "www-data",
+  #  group   => "www-data",
+  #  require =>  [ Package["php7.2-fpm"], Package["nginx"] ] ,
+  #}
 
   ###### SEAFILE
 
@@ -274,7 +273,6 @@ define keeper::install (
 
 
 
-
   # should be set for correct work of document preview 
   file { "/run/tmp":
     ensure  => directory,
@@ -317,11 +315,6 @@ define keeper::install (
       require => [ File["${seafile_root}/ccnet"] ],
     }
 
-    file { "${seafile_root}/ccnet/seafile.ini":
-      *      => $attr,
-      content => "${seafile_root}/seafile-data",
-    }
-      
     file { "${seafile_root}/seafile-data":
       ensure => link,
       target => "/keeper/seafile-data",
@@ -339,7 +332,7 @@ define keeper::install (
  
     exec { 'setup-seafile-mysql.sh':
       command => "/bin/echo 'skipping setup-seafile-mysql.sh'",
-      require => [ File["${seafile_root}/seafile-server-latest"], File["${seafile_root}/ccnet"], File["${seafile_root}/pids"], File["${seafile_root}/seahub-data"], File["${seafile_root}/pro-data"], File["${seafile_root}/conf"], File["${seafile_root}/ccnet/mykey.peer"], File["${seafile_root}/ccnet/seafile.ini"], File["${seafile_root}/seafile-data"] ],
+      require => [ File["${seafile_root}/seafile-server-latest"], File["${seafile_root}/ccnet"], File["${seafile_root}/pids"], File["${seafile_root}/seahub-data"], File["${seafile_root}/pro-data"], File["${seafile_root}/conf"], File["${seafile_root}/ccnet/mykey.peer"], File["${seafile_root}/seafile-data"] ],
     }
   }
   else {
@@ -400,29 +393,17 @@ define keeper::install (
 
   $keeper_ext = "${seafile_root}/KEEPER/seafile_keeper_ext"
 
-  # install keeper pip modules with versions from list
-  exec { "keeper-pip-modules":
-    command => "pip install -r ${settings::environmentpath}/${settings::environment}/data/keeper_files/pip-reqs.txt",
-    path    => ["/bin", "/usr/bin", "/usr/local/bin", "/sbin"],
-    require => [ Exec["python-pip"], Package["default-libmysqlclient-dev"] ],
-  }
-
-  # install debian modules
-  package { "default-libmysqlclient-dev":
-    ensure => latest,
-  }
-
 
   $http_conf = $props['http']['__HTTP_CONF__']
-  #exec { 'enable_keeper_nginx_conf':
-    #command => "/bin/bash -c \"nginx_ensite  ${http_conf} \"",
-    #path    => ["/bin", "/usr/bin", "/usr/local/bin", "/sbin"],
-    #require => [  Exec['nginx_ensite-install'], Service['nginx'] ],
-    #creates => "/etc/nginx/sites-enabled/${http_conf}",
-    #logoutput =>  true,
-  #}
+  exec { 'enable_keeper_nginx_conf':
+    command => "/bin/bash -c \"nginx_ensite  ${http_conf} \"",
+    path    => ["/bin", "/usr/bin", "/usr/local/bin", "/sbin"],
+    require => [  Exec['nginx_ensite-install'], Service['nginx'] ],
+    creates => "/etc/nginx/sites-enabled/${http_conf}",
+    logoutput =>  true,
+  }
 
-  file { '/etc/nginx/sites-enabled': 
+  file { ['/etc/nginx/sites-enabled', '/etc/nginx/sites-available']: 
     ensure => directory,
     require => [ Package['nginx'] ],
   }
@@ -441,7 +422,8 @@ define keeper::install (
     command   => "./build.py deploy --all -y",
     path      => ["${keeper_ext}", "${seafile_root}/seafile-server-latest/seahub", "/bin", "/usr/bin", "/usr/local/bin", "/sbin", ],
     cwd       => "${keeper_ext}",
-    require   => [ Exec["keeper-pip-modules"], Exec['setup-seafile-mysql.sh'], Vcsrepo["${seafile_root}/KEEPER"], Package['nginx'] ],
+    # TODO: check pip module dependencies
+    require   => [ Exec['setup-seafile-mysql.sh'], Vcsrepo["${seafile_root}/KEEPER"], Package['nginx'] ],
     logoutput =>  true,
   }
 
@@ -458,9 +440,9 @@ define keeper::install (
   # onlyif not exists
   exec { 'create_keeper_database':
     command  => "/bin/bash -c \"\\$(mysql -s -N --user=${db['__DB_USER__']} --password=${db['__DB_PASSWORD__']} --database=keeper-db < ${seafile_root}/seafile-server-latest/seahub/keeper/keeper-db.sql)\"",
-    onlyif  => "/bin/bash -c \"[ -z \\$(mysql -s -N --user=${db['__DB_USER__']} --password=${db['__DB_PASSWORD__']} -e \\\"SELECT 1 FROM information_schema.schemata WHERE schema_name='keeper-db'\\\") ];\"",
+    onlyif  => "/bin/bash -c \"[ -z \\$(mysql -s -N --user=${db['__DB_USER__']} --password=${db['__DB_PASSWORD__']} -e \\\"SELECT schema_name FROM information_schema.schemata WHERE schema_name='keeper-db'\\\") ];\"",
     path     => ["/usr/bin", "/bin"],
-    require => [ Exec['keeper-deploy-all'] ],
+    require => Exec['keeper-deploy-all'],
   }
 
 
@@ -567,6 +549,7 @@ class keeper::install::app01 {
   }
 
 }
+
 class keeper::install::app02 {
   include keeper::params
 
@@ -587,6 +570,7 @@ class keeper::install::app02 {
   }
 
 }
+
 class keeper::install::app03 {
   include keeper::params
 

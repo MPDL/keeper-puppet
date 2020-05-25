@@ -5,6 +5,10 @@
 # configures the configuration version (we support older styles for
 # backwards compatibility). Please don't change it unless you know what
 # you're doing.
+
+#SEAFILE_DIR_HOST = "../seafile"
+#SEAFILE_DIR_GUEST = "/opt/seafile"
+
 Vagrant.configure("2") do |config|
   # The most common configuration options are documented and commented below.
   # For a complete reference, please see the online documentation at
@@ -47,9 +51,9 @@ Vagrant.configure("2") do |config|
   # argument is a set of non-required options.
   #config.vm.synced_folder ".", "/vagrant", disabled: true
   config.vm.synced_folder "./puppet", "/etc/puppet"
-  config.vm.synced_folder "/opt/seafile", "/opt/seafile", 
-    type: "nfs_guest",
-    linux__nfs_options: ['rw', 'no_subtree_check', 'no_root_squash', 'insecure']
+  #config.vm.synced_folder SEAFILE_DIR_HOST, SEAFILE_DIR_GUEST,
+    #type: "nfs_guest",
+    #linux__nfs_options: ['rw', 'no_subtree_check', 'no_root_squash', 'insecure']
 
   # Provider-specific configuration so you can fine-tune various
   # backing providers for Vagrant. These expose provider-specific options.
