@@ -119,6 +119,7 @@ define keeper::install (
     "uwsgi",
     "mistune",
     "pytest",
+    "elasticsearch",
     ]     
   each($pip_modules) |$m| {
     exec { "pip-${m}":
