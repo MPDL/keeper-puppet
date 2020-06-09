@@ -414,6 +414,13 @@ define keeper::install (
     require => File['/etc/nginx/sites-enabled'],
   }
 
+  user { 'nginx':
+    groups         => ['www-data', 'nginx'],
+    membership     => minimum,
+    require        => [ Package['nginx'] ],
+  }
+
+
   # deploy KEEPER
   file { "${keeper_ext}/build.py":
     mode      => '0755',
@@ -475,7 +482,6 @@ define keeper::install (
     enable          => true,
     require => [ Package['nginx'], Package['apache2'] ],
   }
-
 
   service { 'keeper':
     ensure     => running,
