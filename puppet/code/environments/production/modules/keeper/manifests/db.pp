@@ -5,10 +5,21 @@ class keeper::db (
 ) inherits keeper::params {
 
   $db = $props['db']
-  $pkgs = $props['package-deps']
+  $deps = $props['package-deps']
 
   include apt
 
+  # add 18.04 repos for 20.04
+  apt::source { 'bionic-security':
+    location => "http://security.ubuntu.com/ubuntu",
+    repos => "main",
+    release => "bionic-security",
+    include  =>  {
+      'src' =>  false,
+      'deb' =>  true,
+    },
+  }
+  
   # add mariadb apt repo
   apt::source { 'mariadb':
     location => "${props['repositories']['__MARIADB__']}",
@@ -25,26 +36,35 @@ class keeper::db (
   }
 
   exec { 'apt-update':
-    command  => "apt-get update",
+    command  => "apt update",
     path     => ["/usr/bin", "/bin"],
-    require => [ Apt::Source["mariadb"] ],
+    require => [ Apt::Source["mariadb"], Apt::Source["bionic-security"]],
   }
 
+
+  package { ['libssl1.0-dev', 'libssl1.0.0']:
+    # ensure    => "latest",
+    require   => [Exec["apt-update"]],
+  }
+  
+  
+  notice("${deps['galera-4_ver']}")
+	
   package { 'galera-4':
-    ensure    => "${pkgs['galera-4']}",
+    ensure    => "${deps['galera-4_ver']}",
     require   => [Exec["apt-update"]],
   }
 
-
-  #include '::mysql::server'
+  # include '::mysql::server'
 
   # puppet module install puppetlabs-mysql 
   # mariadb-server
   class { '::mysql::server':
-      package_name            => 'mariadb-server',
-      package_ensure          => "${pkgs['mariadb-server']}",
+      package_name            => 'mariadb-server-10.4',
+      package_ensure          => "${deps['mariadb_ver']}",
       service_name            => 'mysql',
       root_password           => "${db['__DB_ROOT_PASSWORD__']}",
+      #require                 => [Package["mariadb-common"]],
       require                 => [Exec["apt-update"]],
   }
 
@@ -54,10 +74,40 @@ class keeper::db (
 
   # mariadb-client
   class {'::mysql::client':
-    package_name => 'mariadb-client',
-    package_ensure => "${pkgs['mariadb-client']}",
-    require   => [Exec["apt-update"]],
+    package_name => 'mariadb-client-10.4',
+    package_ensure => "${deps['mariadb_ver']}",
+    #require   => [Exec["apt-update"]],
+    require   => [Class["::mysql::server"]],
   }
+
+	
+  $forced_packages_1 = ['libmariadb3:amd64', 'mysql-common', 'mariadb-common']
+  package { $forced_packages_1:
+    ensure    => "${deps['mariadb_ver']}",
+    require   => [Class["::mysql::server"]],
+  }
+
+	# strictly install and hold versions to 10.4.17, never versions deadly block galera cluster due to not fixed bug (2022-12-16)!
+  $forced_packages_2 = ["mariadb-server-core-10.4", "mariadb-client-core-10.4", "mariadb-client-10.4", "mariadb-client", "mariadb-server-10.4"]
+  each($forced_packages_2) |$p| {
+    exec { "force-and-hold-10.4.17_${p}":
+   		command		=> "apt install ${p}=${deps['mariadb_ver']}; apt-mark hold ${p}",
+   		#command		=> "apt install ${p}=${deps[mariadb_ver]} -y && apt-mark hold ${p}",
+		path		=> ["/usr/bin"],
+   		require		=> [Package["mariadb-common"]],
+   		logoutput	=>  true,
+    }
+  }
+  
+  each($forced_packages_1) |$p| {
+    exec { "hold-10.4.17_${p}":
+   		command		=> "apt-mark hold ${p}",
+		path		=> ["/usr/bin"],
+   		require		=> [Exec["force-and-hold-10.4.17_${forced_packages_2[-1]}"]],
+   		logoutput	=>  true,
+    }
+  }
+
 
   #Apt::Source['mariadb'] ~>
   #Class['apt::update'] ->
@@ -81,23 +131,20 @@ class keeper::db (
     grant    => ['ALL'],
   }
 
-  $log_bin = $db['__LOG_BIN__']
+  $log_bin_dir = $db['__LOG_BIN_DIR__']
   # create bin log dir
-  exec { "create_${log_bin}":
-    command => "mkdir -p ${log_bin}",
+  exec { "create_${log_bin_dir}":
+    command => "mkdir -p ${log_bin_dir}",
     path    => ["/bin", "/usr/bin", "/usr/local/bin", "/sbin"],
-    creates => "${log_bin}",
+    creates => "${log_bin_dir}",
     require => [ Class['::mysql::server'] ]
   }
 
-  file { "${log_bin}":
-    ensure  => directory,
+  file { "${log_bin_dir}":
     owner   => 'mysql',
     group   => 'mysql',
-    require => [ Exec["create_${log_bin}"] ]
+    require => [ Exec["create_${log_bin_dir}"] ]
   }
 
 
 }
-
-

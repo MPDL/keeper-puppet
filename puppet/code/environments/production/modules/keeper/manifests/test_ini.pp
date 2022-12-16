@@ -33,7 +33,7 @@ define keeper::test_ini (
       '__KEEPER_ADMIN_PASSWORD__'   => { 'ensure' => 'absent' },
     },
     })
-  $clean_sections = (($clean_settings.delete('repoistories')).delete('package-deps')).delete('release')
+  $clean_sections = (($clean_settings.delete('repositories')).delete('package-deps')).delete('release')
 
   #override $clean_sections with $node_props
   $node_ini = deep_merge($clean_sections, $node_props)  

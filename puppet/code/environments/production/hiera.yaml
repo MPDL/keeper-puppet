@@ -5,5 +5,5 @@ hierarchy:
     data_hash: ini_data
     paths:
       #- "keeper.yaml"
-      - "keeper.ini"
+      - keeper-puppet.ini
 

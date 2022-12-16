@@ -1,12 +1,5 @@
-#### INSTALLATIOn FOR SINGLE NODE KEEPER
-# https://manual.seafile.com/deploy_pro/download_and_setup_seafile_professional_server.html
-# https://manual.seafile.com/deploy_pro/deploy_in_a_cluster.html
-
-#class keeper::install (
-  #$seafile_root = $keeper::params::seafile_root,
-  #$seafile_ver = $keeper::params::seafile_ver,
-  #$attr = $keeper::params::attr,
-#) inherits keeper::params {
+# Main Class for keeper node installation
+# To be called from init.pp
 define keeper::install (
   Hash $node_props = {},
   Hash $node_defaults = {}
@@ -27,7 +20,8 @@ define keeper::install (
   $db = $props['db'] 
   $pkgs = $props['package-deps'] 
   $sys = $props['system']
-  #clean up some stuff from props 
+  
+  #clean up some sensitive stuff from default props
   $clean_settings = deep_merge($props, { 
     'db'      => {
       '__DB_ROOT_PASSWORD__' => { 'ensure' => 'absent' } 
@@ -38,17 +32,18 @@ define keeper::install (
       '__OS_UID__' => { 'ensure' => 'absent' }, 
     },
     'global'  => {
-      '__SECRET_KEY__'   => "\"${props['global']['__SECRET_KEY__']}\"",
       '__KEEPER_ADMIN_PASSWORD__'   => { 'ensure' => 'absent' },
     },
     })
-  $clean_sections = (($clean_settings.delete('repoistories')).delete('package-deps')).delete('release')
+  $clean_sections = (($clean_settings.delete('repositories')).delete('package-deps')).delete('release')
 
   #override $clean_sections with $node_props
   $node_ini = deep_merge($clean_sections, $node_props)  
 
-  #do not install db by default
-  #require keeper::db
+  # notice("MERGED NODE PROPS: ${node_ini}")
+  
+  #can be commented if db is already installed
+  require keeper::db
 
   ##### USER / GROUP
   group { "${sys['__OS_GROUP__']}":
@@ -66,7 +61,7 @@ define keeper::install (
   }
 
 
-  #### MODULES
+  #### DEB MODULES
   $deb_modules = [
     "lsb-release",
     "build-essential",
@@ -86,8 +81,7 @@ define keeper::install (
     "libffi-dev",
     "libldap2-dev",
     "default-libmysqlclient-dev",
-    "libssl1.0-dev",
-    "nodejs",
+    #"libssl1.0-dev",
     # dev
     #"phpmyadmin",
     #"php7.2-fpm"
@@ -96,12 +90,8 @@ define keeper::install (
     ensure => latest,
   }
  
-  package { "requirejs":
-    ensure   => latest,
-    provider => "npm",
-    require  => [  Package["nodejs"] ],
-  }
 
+	# PIP MODULES
   $pip_modules = [
     "Pillow", 
     "pylibmc",
@@ -117,41 +107,28 @@ define keeper::install (
     "mysqlclient",
     "sqlalchemy",
     "uwsgi",
-    "mistune",
+    "mistune==0.8.4",
     "pytest",
     "elasticsearch",
+    # bloxberg
+    "PyPDF2",
+    "lds_merkle_proof_2019",
     ]     
   each($pip_modules) |$m| {
     exec { "pip-${m}":
-      command =>   "pip3   install --timeout=3600 ${m}",
+      command =>   "pip3 install --timeout=3600 ${m}",
       path    => ["/usr/bin", "/usr/local/bin", "/sbin"],
       require => [ Package["python3-pip"], Package["python3-setuptools"] ],
       #unless  => "pip show ${m}",
       logoutput =>  true,
     }
   }
-
-  alternative_entry { '/usr/bin/python3.6':
-    ensure  => present,
-    altlink => '/usr/bin/python',
-    altname => 'python',
-    priority => 10,
-    require => Package['python3'],
-  }
-
-  alternatives { 'python':
-    path => '/usr/bin/python3.6',
-    require => Package['python3'],
-  }
-
-  # remove python2 
-  $python2 = [
-    "python2",
-    "python2-minimal",
-  ]
-  package { $python2:
-    ensure => absent,
-    require => Alternatives["python"],
+  exec { "upgrade-chardet":
+    command =>   "pip3 install --timeout=3600 --upgrade chardet",
+    path    => ["/usr/bin", "/usr/local/bin", "/sbin"],
+    require => [ Package["python3-pip"], Package["python3-setuptools"] ],
+    #unless  => "pip show ${m}",
+    logoutput =>  true,
   }
 
 
@@ -164,25 +141,34 @@ define keeper::install (
   #  }
   #}
 
-  include apt
+	# NGINX
+  # include apt
   # add nginx apt repo
-  apt::source { 'nginx_repo':
-    location => "${props['repositories']['__NGINX__']}",
-    repos    => 'nginx',
-    release  => "${props['repositories']['__OS_RELEASE__']}",
-    key      => {
-      id     => "${props['repositories']['__NGINX_KEYID__']}",
-      source => "${props['repositories']['__NGINX_KEYSERVER__']}"
-    },
-    include  =>  {
-      'src' =>  false,
-      'deb' =>  true,
-    },
-  }
+  # apt::source { 'nginx_repo':
+    # location => "${props['repositories']['__NGINX__']}",
+    # repos    => 'nginx',
+    # release  => "${props['repositories']['__OS_RELEASE__']}",
+    # key      => {
+      # id     => "${props['repositories']['__NGINX_KEYID__']}",
+      # source => "${props['repositories']['__NGINX_KEYSERVER__']}"
+    # },
+    # include  =>  {
+      # 'src' =>  false,
+      # 'deb' =>  true,
+    # },
+  # }
   # nginx
-  package { 'nginx':
-    ensure  => "${pkgs['nginx']}",
-    require => [ Apt::Source['nginx_repo'], Class['apt::update'] ]
+  # package { 'nginx':
+    # ensure  => "${pkgs['nginx']}",
+    # require => [ Apt::Source['nginx_repo'], Class['apt::update'] ]
+  # }
+
+	# install nginx-mainline stable version
+  class{ 'nginx':
+     manage_repo => false,
+     confd_only => false,
+     package_source => 'nginx-mainline',
+     service_ensure => stopped,
   }
 
   #file { "/run/php/php7.2-fpm.sock":
@@ -219,48 +205,57 @@ define keeper::install (
     source  => "${settings::environmentpath}/${settings::environment}/data/keeper_files/seafile-license.txt",
   }
 
+	# NODE specific INI generation
   # generate keeper ini 
+  notice("INI: ${ini_defaults['path']} ")
+
   create_ini_settings($node_ini, $ini_defaults)
 
   file { "${ini_defaults['path']}":
     *      => $attr,
   }
 
-  $ini_memcached = regsubst("${props['memcached']['__MEMCACHED_KA_UNICAST_PEERS__']}", "\n", "\\n", 'G')
+  $ini_memcached = regsubst("${node_ini['memcached']['__MEMCACHED_KA_UNICAST_PEERS__']}", "\n", "\\n", 'G')
 
   ini_setting {'memcached escape newline':
-        ensure  => present,
-        section => 'memcached',
-        path => "${ini_defaults['path']}",
-        setting => '__MEMCACHED_KA_UNICAST_PEERS__',
-        value => "${ini_memcached}",
+		ensure  => present,
+    section => 'memcached',
+    path => "${ini_defaults['path']}",
+    setting => '__MEMCACHED_KA_UNICAST_PEERS__',
+    value => "${ini_memcached}",
   }
-
   
   ini_setting {'nodes quotes':
-        ensure  => present,
-        section => 'global',
-        path => "${ini_defaults['path']}",
-        setting => '__CLUSTER_NODES__',
-	value => "\"${props['global']['__CLUSTER_NODES__']}\"",
+  	ensure  => present,
+    section => 'global',
+    path => "${ini_defaults['path']}",
+    setting => '__CLUSTER_NODES__',
+		value => "\"${node_ini['global']['__CLUSTER_NODES__']}\"",
   }
 
   ini_setting {'secret key quotes':
-        ensure  => present,
-        section => 'global',
-        path => "${ini_defaults['path']}",
-        setting => '__SECRET_KEY__',
-        value => "\"${props['global']['__SECRET_KEY__']}\"",
+    ensure  => present,
+    section => 'global',
+    path => "${ini_defaults['path']}",
+    setting => '__SECRET_KEY__',
+    value => "\"${node_ini['global']['__SECRET_KEY__']}\"",
   }
 
-  ini_setting {'remote log quotes':
-        ensure  => present,
-        section => 'backup',
-        path => "${ini_defaults['path']}",
-        setting => '__REMOTE_LOG__',
-        value => "\"${props['backup']['__REMOTE_LOG__']}\"",
-  }
+  # ini_setting {'remote log quotes':
+        # ensure  => present,
+        # section => 'backup',
+        # path => "${ini_defaults['path']}",
+        # setting => '__REMOTE_LOG__',
+        # value => "\"${props['backup']['__REMOTE_LOG__']}\"",
+  # }
 
+  ini_setting { 'subst \x to x for bxb __BLOXBERG_PUBLIC_KEY__':
+	  ensure  => present,
+	  section => 'bloxberg',
+	  path => "${ini_defaults['path']}",
+	  setting => '__BLOXBERG_PUBLIC_KEY__',
+	  value => regsubst($node_ini['bloxberg']['__BLOXBERG_PUBLIC_KEY__'], '\\\x', 'x'),
+  }
 
 #  ini_subsetting {'nodes quotes':
 #        ensure  => present,
@@ -273,37 +268,53 @@ define keeper::install (
 #  }
 
 
+	###
+	### KEEPER DIRECTORIES/FILES
+	###
 
+  $dirtree = dirtree($::rubysitedir)
+	
   # should be set for correct work of document preview 
   file { "/run/tmp":
     ensure  => directory,
     mode    => '1777',
   }
 
-  $dirtree = dirtree($::rubysitedir)
+	# ARCHIVING
+	dirtree { 'keeper archive storage':
+		ensure  => present,
+		path    => "${node_ini['archiving']['__LOCAL_STORAGE__']}",
+		parents => true,
+	}
 
-  notify { $dirtree: }
-
-  dirtree { 'keeper archive storage':
-    ensure  => present,
-    path    => "${props['archiving']['__LOCAL_STORAGE__']}",
-    parents => true,
-  }
-
-  file { "${props['archiving']['__LOCAL_STORAGE__']}":
+  file { "${node_ini['archiving']['__LOCAL_STORAGE__']}":
     ensure => directory,
     mode   => '1777',
   }
 
-
-  dirtree { 'keeper log directory':
+	# BLOXBERG CERTS
+  dirtree { 'bloxberg storage':
     ensure  => present,
-    path    => "${props['logging']['__KEEPER_LOG_DIR__']}",
+    path    => "${node_ini['bloxberg']['__BLOXBERG_CERTS_STORAGE__']}",
     parents => true,
   }
 
-  if $props['backend']['__GPFS_DEVICE__'] {
-    # This section runs when the GPFS_DEVICE is defined, mainly in QA and PROD
+  file { "${node_ini['bloxberg']['__BLOXBERG_CERTS_STORAGE__']}":
+    ensure => directory,
+    mode   => '1777',
+  }
+
+	# LOGS
+  dirtree { 'keeper log directory':
+    ensure  => present,
+    path    => "${node_ini['logging']['__KEEPER_LOG_DIR__']}",
+    parents => true,
+  }
+
+  
+  if ($node_ini['global']['__NODE_TYPE__'] != 'SINGLE') and ($node_ini['backend']['__GPFS_DEVICE__']) {
+  	# This section runs for non SINGLE and GPFS_DEVICE is defined
+  	# Create dirs/files and do not create db!
     file { [ "${seafile_root}/ccnet", "${seafile_root}/pids", "${seafile_root}/seahub-data", "${seafile_root}/pro-data", "${seafile_root}/conf" ]:
       ensure => directory,
       *      => $attr,
@@ -325,23 +336,23 @@ define keeper::install (
 
     file { "${seafile_root}/seafile-server-latest":
       ensure => link,
-      target => "${seafile_root}/${props['global']['__SEAFILE_SERVER_LATEST_DIR__']}",
+      target => "${seafile_root}/${node_ini['global']['__SEAFILE_SERVER_LATEST_DIR__']}",
       force => true,
       * => $attr,
       require => Archive["$seafile_arch"],
     }
- 
+ 		# skip non interactive setup
     exec { 'setup-seafile-mysql.sh':
       command => "/bin/echo 'skipping setup-seafile-mysql.sh'",
       require => [ File["${seafile_root}/seafile-server-latest"], File["${seafile_root}/ccnet"], File["${seafile_root}/pids"], File["${seafile_root}/seahub-data"], File["${seafile_root}/pro-data"], File["${seafile_root}/conf"], File["${seafile_root}/ccnet/mykey.peer"], File["${seafile_root}/seafile-data"] ],
     }
   }
   else {
-    # install seafile for mysql in non-interactive mode
+  	# ONLY FOR SINGLE NODE WITHOUT GPFS! 
     # see https://manual.seafile.com/deploy/using_mysql.html#setup-in-non-interactive-way
     # NOTE: DBs have been already created in mariadb.pp!!!
     exec { 'setup-seafile-mysql.sh':
-      command      => "setup-seafile-mysql.sh auto -n ${props['http']['__SERVER_NAME__']} -i ${props['http']['__NODE_FQDN__']} -d ${seafile_root}/seafile-data -e 1 -o ${db['__DB_HOST__']} -t ${db['__DB_PORT__']} -u ${db['__DB_USER__']} -w ${db['__DB_PASSWORD__']} -c ccnet-db -s seafile-db -b seahub-db",
+      command      => "setup-seafile-mysql.sh auto -n ${node_ini['http']['__SERVER_NAME__']} -i ${node_ini['http']['__NODE_FQDN__']} -d ${seafile_root}/seafile-data -e 1 -o ${db['__DB_HOST__']} -t ${db['__DB_PORT__']} -u ${db['__DB_USER__']} -w ${db['__DB_PASSWORD__']} -c ccnet-db -s seafile-db -b seahub-db",
       path         => ["${seafile_root}/${seafile_ver}", "/usr/bin", "/usr/local/bin", "/bin"],
       cwd          => "${seafile_root}/${seafile_ver}",
       creates      => "${seafile_root}/seafile-data",
@@ -354,15 +365,14 @@ define keeper::install (
       *       => $attr,
       require => Exec['setup-seafile-mysql.sh'],
     }
+
   }
-
-
 
   
   # Create server admin after first seahub start
   #  see https://github.com/haiwen/seafile-server/blob/master/scripts/check_init_admin.py#L358
   file { "${seafile_root}/conf/admin.txt":
-    content  => "{ \"email\": \"${props['global']['__KEEPER_ADMIN_EMAIL__']}\",  \"password\": \"${props['global']['__KEEPER_ADMIN_PASSWORD__']}\" }",
+    content  => "{ \"email\": \"${node_ini['global']['__KEEPER_ADMIN_EMAIL__']}\",  \"password\": \"${node_ini['global']['__KEEPER_ADMIN_PASSWORD__']}\" }",
   }
 
   # clean admin.txt if at least one user already created
@@ -395,19 +405,20 @@ define keeper::install (
   $keeper_ext = "${seafile_root}/KEEPER/seafile_keeper_ext"
 
 
-  $http_conf = $props['http']['__HTTP_CONF__']
+  $http_conf = $node_ini['http']['__HTTP_CONF__']
   exec { 'enable_keeper_nginx_conf':
     command => "/bin/bash -c \"nginx_ensite  ${http_conf} \"",
     path    => ["/bin", "/usr/bin", "/usr/local/bin", "/sbin"],
-    require => [  Exec['nginx_ensite-install'], Service['nginx'] ],
+    #require => [  Exec['nginx_ensite-install'], Service['nginx'], Class['nginx'] ],
+    require => [  Exec['nginx_ensite-install'], Package['nginx'] ],
     creates => "/etc/nginx/sites-enabled/${http_conf}",
     logoutput =>  true,
   }
 
-  file { ['/etc/nginx/sites-enabled', '/etc/nginx/sites-available']: 
-    ensure => directory,
-    require => [ Package['nginx'] ],
-  }
+  # file { ['/etc/nginx/sites-enabled', '/etc/nginx/sites-available']:
+    # ensure => directory,
+    # require => [ Package['nginx'] ],
+  # }
 
   file { "/etc/nginx/sites-enabled/${http_conf}":
     ensure  => link,
@@ -426,6 +437,9 @@ define keeper::install (
   file { "${keeper_ext}/build.py":
     mode      => '0755',
   }
+
+
+ 
   exec { "keeper-deploy-all":
     command   => "./build.py deploy --all -y",
     path      => ["${keeper_ext}", "${seafile_root}/seafile-server-latest/seahub", "/bin", "/usr/bin", "/usr/local/bin", "/sbin", ],
@@ -445,14 +459,13 @@ define keeper::install (
   #}
 
   # create mysql keeper database and tables
-  # onlyif not exists
+  # onlyif moved to sql: IF NOT EXISTS option for CREATE TABLE|TRIGGER
   exec { 'create_keeper_database':
     command  => "/bin/bash -c \"\\$(mysql -s -N --user=${db['__DB_USER__']} --password=${db['__DB_PASSWORD__']} --database=keeper-db < ${seafile_root}/seafile-server-latest/seahub/keeper/keeper-db.sql)\"",
-    onlyif  => "/bin/bash -c \"[ -z \\$(mysql -s -N --user=${db['__DB_USER__']} --password=${db['__DB_PASSWORD__']} -e \\\"SELECT schema_name FROM information_schema.schemata WHERE schema_name='keeper-db'\\\") ];\"",
+    #onlyif  => "/bin/bash -c \"[ -z \\$(mysql -s -N --user=${db['__DB_USER__']} --password=${db['__DB_PASSWORD__']} -e \\\"SELECT schema_name FROM information_schema.schemata WHERE schema_name='keeper-db'\\\") ];\"",
     path     => ["/usr/bin", "/bin"],
     require => Exec['keeper-deploy-all'],
   }
-
 
   # keeper UTILS
   # nginx_ensite: https://github.com/perusio/nginx_ensite
@@ -477,20 +490,23 @@ define keeper::install (
     require => Package['memcached'],
   }
 
-  service { 'nginx':
-    ensure          => running,
-    hasrestart      => true,
-    enable          => true,
-    require => [ Package['nginx'], Package['apache2'] ],
-  }
+  # service { 'nginx':
+    # ensure          => running,
+    # hasrestart      => true,
+    # enable          => true,
+    # require => [ Package['nginx'], Package['apache2'] ],
+  # }
 
+
+	# START KEEPER
   service { 'keeper':
     ensure     => running,
     enable     => true,
     hasrestart => true,
-    require    => [ Service['memcached'], Service['nginx'] ], 
+    require    => [ Service['memcached'], Service['nginx'], Exec['create_keeper_database'] ],
   }
 
+	# restart nginx with new updated confs
   exec { 'restart_nginx':
     command     => '/bin/systemctl restart nginx',
     require     => Service['keeper']
@@ -508,184 +524,3 @@ define keeper::install (
   }
 
 }
-
-class keeper::install::single {
-  include keeper::params
-
-  $node_props = {
-    #### put here node specific settings 
-    'global' => {
-      '__NODE_TYPE__'   => 'SINGLE',
-    },
-    #'http' => {
-      #'__NODE_FQDN__'   => '127.0.0.1',
-      #'__SERVICE_URL__' => 'http://127.0.0.1',
-      #'__SERVER_NAME__' => '127.0.0.1',
-      #} 
-  }
-
-  $node_defaults = {
-    'path'              => "${seafile_root}/keeper-single.ini",
-    'key_val_separator' => '=',
-  }
-
-
-  keeper::install { 'single': 
-    node_props => $node_props,  
-    node_defaults => $node_defaults,
-  }
-
-}
-
-class keeper::install::app01 {
-  include keeper::params
-
-  $node_props = {}
-
-  $seafile_root = $keeper::params::seafile_root
-
-  $node_defaults = {
-    'path'              => "${seafile_root}/keeper-app01-qa.ini",
-    'key_val_separator' => '=',
-  }
-
-
-  keeper::install { 'app01': 
-    node_props => $node_props,  
-    node_defaults => $node_defaults,
-  }
-
-}
-
-class keeper::install::app02 {
-  include keeper::params
-
-  $seafile_root = $keeper::params::seafile_root
-
-  #$node_props = {'global' => { '__GPFS_FILESET__' => 'keeper-fileset' } }
-  $node_props = {}
-
-  $node_defaults = {
-    'path'              => "${seafile_root}/keeper-app02-qa.ini",
-    'key_val_separator' => '=',
-  }
-
-
-  keeper::install { 'app02': 
-    node_props => $node_props,  
-    node_defaults => $node_defaults,
-  }
-
-}
-
-class keeper::install::app03 {
-  include keeper::params
-
-  $seafile_root = $keeper::params::seafile_root
-
-  #$node_props = {'global' => { '__GPFS_FILESET__' => 'keeper-fileset' } }
-  $node_props = {}
-
-  $node_defaults = {
-    'path'              => "${seafile_root}/keeper-app03-qa.ini",
-    'key_val_separator' => '=',
-  }
-
-
-  keeper::install { 'app03': 
-    node_props => $node_props,  
-    node_defaults => $node_defaults,
-  }
-
-}
-
-class keeper::install::app04 {
-  include keeper::params
-
-  $seafile_root = $keeper::params::seafile_root
-
-  #$node_props = {'global' => { '__GPFS_FILESET__' => 'keeper-fileset' } }
-  $node_props = {}
-
-  $node_defaults = {
-    'path'              => "${seafile_root}/keeper-app04-qa.ini",
-    'key_val_separator' => '=',
-  }
-
-  keeper::install { 'app04':
-    node_props => $node_props,
-    node_defaults => $node_defaults,
-  }
-
-}
-
-class keeper::install::app05 {
-  include keeper::params
-
-  $seafile_root = $keeper::params::seafile_root
-
-  #$node_props = {'global' => { '__GPFS_FILESET__' => 'keeper-fileset' } }
-  $node_props = {}
-
-  $node_defaults = {
-    'path'              => "${seafile_root}/keeper-app05-qa.ini",
-    'key_val_separator' => '=',
-  }
-
-  keeper::install { 'app05':
-    node_props => $node_props,
-    node_defaults => $node_defaults,
-  }
-
-}
-class keeper::install::app06 {
-  include keeper::params
-
-  $seafile_root = $keeper::params::seafile_root
-
-  #$node_props = {'global' => { '__GPFS_FILESET__' => 'keeper-fileset' } }
-  $node_props = {}
-
-  $node_defaults = {
-    'path'              => "${seafile_root}/keeper-app06-qa.ini",
-    'key_val_separator' => '=',
-  }
-
-  keeper::install { 'app06':
-    node_props => $node_props,
-    node_defaults => $node_defaults,
-  }
-
-}
-
-
-class keeper::install::back {
-  include keeper::params
-
-  $seafile_root = $keeper::params::seafile_root
-
-  $node_props = {
-    'global' => { 
-      '__NODE_TYPE__' => 'BACKGROUND', 
-    },
-    'http' => { 
-      '__NODE_FQDN__' => '127.0.0.1',
-    },
-    'office' => { '__IS_OFFICE_CONVERTOR_NODE__' => 'true' },
-  }
-
-  $node_defaults = {
-    'path'              => "${seafile_root}/keeper-app-bg02-qa.ini",
-    'key_val_separator' => '=',
-  }
-
-
-  keeper::install { 'back': 
-    node_props => $node_props,  
-    node_defaults => $node_defaults,
-  }
-
-}
-
-
-
