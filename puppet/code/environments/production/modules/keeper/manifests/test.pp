@@ -1,32 +1,64 @@
 class keeper::test {
 
+  $hash1 = {
+    'sec1' => {
+      'key1' => 'val1',
+      'key2' => 'val2',
+    },
+    'sec2' => {
+      'key1' => 'val1',
+      'key2' => 'val2',
+    },
+  }
+  $hash2 = {
+    'sec1' => {
+      'key4' => 'val4',
+      'key5' => 'val5',
+      'key6' => 'val6',
+    },
+    'sec2' => {
+      'key2' => 'hohoho',
+      'key4' => 'val4',
+      'key5' => 'val5',
+      'key6' => 'val6',
+    },
+  }
+
+
+  $merged = $hash1.reduce({}) |$memo, $x| {
+      $memo + {$x[0] => $hash2[$x[0]] + $hash1[$x[0]]}
+  }
+
+  $res = deep_merge($hash1, $hash2)
+  
+  notice("Hello!!! ${res}")
 
   # is needed for first seahub start, it will create server admin
   #  see https://github.com/haiwen/seafile-server/blob/master/scripts/check_init_admin.py#L358
   
-  $sections =[ 
-    'global',
-    'system', 
-    'backend',  
-    'db',
-    'email', 
-    'background', 
-    'office',
-    'backup',
-    'bloxberg',
-    'external_resources',
-    'archiving',
-    'doi',
-    'branding',
-    'http',
-    'memcached',
-    'logging',
-    'tests'
-  ]
-
-  $props = $sections.reduce( {} ) |$memo, $sec| {
-    $memo + { $sec => lookup($sec, Hash) }
-  }
+  # $sections =[
+    # 'global',
+    # 'system',
+    # 'backend',
+    # 'db',
+    # 'email',
+    # 'background',
+    # 'office',
+    # 'backup',
+    # 'bloxberg',
+    # 'external_resources',
+    # 'archiving',
+    # 'doi',
+    # 'branding',
+    # 'http',
+    # 'memcached',
+    # 'logging',
+    # 'tests'
+  # ]
+# 
+  # $props = $sections.reduce( {} ) |$memo, $sec| {
+    # $memo + { $sec => lookup($sec, Hash) }
+  # }
 
   #$defaults = { 
     #'path'              => '/tmp/foo.ini',
@@ -34,7 +66,7 @@ class keeper::test {
   #}
 
   #$secure_props = deep_merge($props, 
-    #{ 'db'=> {
+    # { 'db'=> {
       #'__DB_ROOT_PASSWORD__' => { 'ensure' => 'absent' } 
     #}})
   #$props['global']['__DB_ROOT_PASSWORD__'] = { 'ensure' => 'absent' }
@@ -48,9 +80,8 @@ class keeper::test {
     #content  => "${props['global']['__SEAFILE_LICENSE__']}",
   #}
 
-
+  
     
   #notice("Hello!!! ${settings::environmentpath}/${settings::environment}")
 
 }
-

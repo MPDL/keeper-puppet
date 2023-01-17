@@ -141,35 +141,11 @@ define keeper::install (
   #  }
   #}
 
-	# NGINX
-  # include apt
-  # add nginx apt repo
-  # apt::source { 'nginx_repo':
-    # location => "${props['repositories']['__NGINX__']}",
-    # repos    => 'nginx',
-    # release  => "${props['repositories']['__OS_RELEASE__']}",
-    # key      => {
-      # id     => "${props['repositories']['__NGINX_KEYID__']}",
-      # source => "${props['repositories']['__NGINX_KEYSERVER__']}"
-    # },
-    # include  =>  {
-      # 'src' =>  false,
-      # 'deb' =>  true,
-    # },
-  # }
-  # nginx
-  # package { 'nginx':
-    # ensure  => "${pkgs['nginx']}",
-    # require => [ Apt::Source['nginx_repo'], Class['apt::update'] ]
-  # }
+  # keepalived
+  require keeper::keepalived
 
-	# install nginx-mainline stable version
-  class{ 'nginx':
-     manage_repo => false,
-     confd_only => false,
-     package_source => 'nginx-mainline',
-     service_ensure => stopped,
-  }
+	# NGINX
+  require keeper::nginx
 
   #file { "/run/php/php7.2-fpm.sock":
   #  ensure  => present,
@@ -347,7 +323,7 @@ define keeper::install (
       require => [ File["${seafile_root}/seafile-server-latest"], File["${seafile_root}/ccnet"], File["${seafile_root}/pids"], File["${seafile_root}/seahub-data"], File["${seafile_root}/pro-data"], File["${seafile_root}/conf"], File["${seafile_root}/ccnet/mykey.peer"], File["${seafile_root}/seafile-data"] ],
     }
   }
-  else {
+  elsif ($node_ini['global']['__NODE_TYPE__'] == 'SINGLE') and (!$node_ini['backend']['__GPFS_DEVICE__']) {
   	# ONLY FOR SINGLE NODE WITHOUT GPFS! 
     # see https://manual.seafile.com/deploy/using_mysql.html#setup-in-non-interactive-way
     # NOTE: DBs have been already created in mariadb.pp!!!
