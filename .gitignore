@@ -6,3 +6,4 @@ keeper.ini
 seafile-pro-server_6.3.12_x86-64_Ubuntu.tar.gz
 seafile-license.txt
 puppet/code/environments/production/modules/keeper/manifests/init.pp
+puppet/code/environments/production/data/keeper-puppet.ini
