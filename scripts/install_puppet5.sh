@@ -20,5 +20,5 @@ gem install inifile -v 3.0.0
 exit
 cd $HOME
 git clone https://github.com/MPDL/keeper-puppet.git && cd keeper-puppet
-git co keeper_3.1-focal
+git checkout keeper_3.1-focal
 sudo cp -vr puppet/code/environments /etc/puppet/code
