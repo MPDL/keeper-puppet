@@ -144,7 +144,7 @@ define keeper::install (
   # keepalived
   require keeper::keepalived
 
-	# NGINX
+  # NGINX
   require keeper::nginx
 
   #file { "/run/php/php7.2-fpm.sock":
@@ -391,10 +391,10 @@ define keeper::install (
     logoutput =>  true,
   }
 
-  # file { ['/etc/nginx/sites-enabled', '/etc/nginx/sites-available']:
-    # ensure => directory,
-    # require => [ Package['nginx'] ],
-  # }
+  file { ['/etc/nginx/sites-enabled', '/etc/nginx/sites-available']:
+    ensure => directory,
+    require => [ Class['keeper::nginx'] ],
+  }
 
   file { "/etc/nginx/sites-enabled/${http_conf}":
     ensure  => link,
@@ -479,7 +479,7 @@ define keeper::install (
     ensure     => running,
     enable     => true,
     hasrestart => true,
-    require    => [ Service['memcached'], Service['nginx'], Exec['create_keeper_database'] ],
+    require    => [ Service['memcached'], Class['keeper::nginx'], Exec['create_keeper_database'] ],
   }
 
 	# restart nginx with new updated confs
