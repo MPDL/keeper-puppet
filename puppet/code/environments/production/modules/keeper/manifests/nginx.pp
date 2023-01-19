@@ -39,15 +39,17 @@ class keeper::nginx (
     logoutput =>  true,
   }
 
-  exec { 'nx-apt-update':
-    command  => "apt update",
-    path     => ["/usr/bin"],
-    require => [ Exec["nx-add-repo"], Exec["nx-pin-ver"] ],
-  }
+  include apt
+  
+  # exec { 'nx-apt-update':
+    # command  => "apt update",
+    # path     => ["/usr/bin"],
+    # require => [ Exec["nx-add-repo"], Exec["nx-pin-ver"] ],
+  # }
 
   package { "nginx":
     ensure => "${nx_ver}~${nx_release}",
-    require => Exec["nx-apt-update"]
+    require => [ Exec["nx-add-repo"], Exec["nx-pin-ver"], Class['apt::update'] ],
   }
   
 	# NGINX
