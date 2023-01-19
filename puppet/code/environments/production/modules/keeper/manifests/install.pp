@@ -475,6 +475,7 @@ define keeper::install (
   # }
 
 
+
 	# START KEEPER
   service { 'keeper':
     ensure     => running,
@@ -488,6 +489,13 @@ define keeper::install (
     command     => '/bin/systemctl restart nginx',
     require     => Service['keeper']
   }
+
+  # disable puppet agent
+  exec { 'disable_puppet_agent':
+    command     => '/usr/bin/puppet agent --disable',
+    require     => Service['keeper']
+  }
+
 
   # remove apache
   $apache2 = [
