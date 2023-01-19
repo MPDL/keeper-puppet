@@ -23,3 +23,13 @@ cd $HOME
 git clone https://github.com/MPDL/keeper-puppet.git && cd keeper-puppet
 git checkout keeper_3.1-focal
 sudo cp -vr puppet/code/environments /etc/puppet/code
+
+: <<'END'
+pushd /etc/puppet/code/environments/production
+sudo mv -v ~/keeper-puppet.ini data/
+sudo mv -v ~/seafile-license.txt data/keeper_files/
+sudo mv -v ~/mykey.peer data/keeper_files/
+sudo mv -v ~/seafile-pro-server_8.0.17_x86-64_Ubuntu.tar.gz modules/keeper/files/
+sudo mv -v ~/init.pp modules/keeper/manifests/
+popd
+END
