@@ -12,7 +12,6 @@ class keeper::nginx (
     "curl",
     "gnupg2",
     "ca-certificates",
-    "lsb-release",
     "debian-archive-keyring",
   ]
   package { $deps:
