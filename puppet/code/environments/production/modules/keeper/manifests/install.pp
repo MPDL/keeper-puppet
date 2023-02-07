@@ -69,18 +69,20 @@ define keeper::install (
     "openjdk-8-jre",
     "python3",
     "python3-setuptools",
-    "python3-pip",
+    #"python3-pip",
     "poppler-utils",
     "clamav",
     "gettext",
     "memcached",
     "libmemcached-dev",
+    "postfix",
     "zlib1g-dev",
     "libfreetype6-dev",
     "monitoring-plugins",
     "libffi-dev",
     "libldap2-dev",
     "default-libmysqlclient-dev",
+    "libmysqlclient-dev"
     #"libssl1.0-dev",
     # dev
     #"phpmyadmin",
@@ -89,7 +91,12 @@ define keeper::install (
   package { $deb_modules:
     ensure => latest,
   }
- 
+
+  exec { "pip-from-get-pip.py":
+  	command => "curl https://bootstrap.pypa.io/get-pip.py > /tmp/get-pip.py && sudo python3 /tmp/get-pip.py && rm /tmp/get-pip.py",
+  	path    => ["/usr/bin", "/bin"],
+  	require => [ Package["python3"], Package["python3-setuptools"] ],
+  }
 
 	# PIP MODULES
   $pip_modules = [
@@ -118,7 +125,7 @@ define keeper::install (
     exec { "pip-${m}":
       command =>   "pip3 install --timeout=3600 ${m}",
       path    => ["/usr/bin", "/usr/local/bin", "/sbin"],
-      require => [ Package["python3-pip"], Package["python3-setuptools"] ],
+      require => [ Package["python3-setuptools"], Exec["pip-from-get-pip.py"] ],
       #unless  => "pip show ${m}",
       logoutput =>  true,
     }
@@ -126,7 +133,7 @@ define keeper::install (
   exec { "upgrade-chardet":
     command =>   "pip3 install --timeout=3600 --upgrade chardet",
     path    => ["/usr/bin", "/usr/local/bin", "/sbin"],
-    require => [ Package["python3-pip"], Package["python3-setuptools"] ],
+    require => [ Package["python3-setuptools"], Exec["pip-from-get-pip.py"] ],
     #unless  => "pip show ${m}",
     logoutput =>  true,
   }
@@ -263,10 +270,10 @@ define keeper::install (
 		parents => true,
 	}
 
-  file { "${node_ini['archiving']['__LOCAL_STORAGE__']}":
-    ensure => directory,
-    mode   => '1777',
-  }
+  #file { "${node_ini['archiving']['__LOCAL_STORAGE__']}":
+  #  ensure => directory,
+  #  mode   => '1777',
+  #}
 
 	# BLOXBERG CERTS
   dirtree { 'bloxberg storage':
@@ -275,10 +282,10 @@ define keeper::install (
     parents => true,
   }
 
-  file { "${node_ini['bloxberg']['__BLOXBERG_CERTS_STORAGE__']}":
-    ensure => directory,
-    mode   => '1777',
-  }
+  #file { "${node_ini['bloxberg']['__BLOXBERG_CERTS_STORAGE__']}":
+  #  ensure => directory,
+  #  mode   => '1777',
+  #}
 
 	# LOGS
   dirtree { 'keeper log directory':
@@ -343,22 +350,24 @@ define keeper::install (
       require => Exec['setup-seafile-mysql.sh'],
     }
 
+
+
   }
 
+    # Create server admin after first seahub start
+      #  see https://github.com/haiwen/seafile-server/blob/master/scripts/check_init_admin.py#L358
+      file { "${seafile_root}/conf/admin.txt":
+        content  => "{ \"email\": \"${node_ini['global']['__KEEPER_ADMIN_EMAIL__']}\",  \"password\": \"${node_ini['global']['__KEEPER_ADMIN_PASSWORD__']}\" }",
+      }
+    
+      # clean admin.txt if at least one user already created
+      exec { 'clean_admin.txt':
+        command  => "rm -f ${seafile_root}/conf/admin.txt",
+        onlyif  => "/bin/bash -c \"[[ -n \\$(mysql -s -N --user=${db['__DB_USER__']} --password=${db['__DB_PASSWORD__']} --database=ccnet-db --execute='SELECT * from EmailUser') ]];\"",
+        path     => ["/usr/bin", "/bin"],
+        require => [ File["${seafile_root}/conf/admin.txt"] ],
+      }  
   
-  # Create server admin after first seahub start
-  #  see https://github.com/haiwen/seafile-server/blob/master/scripts/check_init_admin.py#L358
-  file { "${seafile_root}/conf/admin.txt":
-    content  => "{ \"email\": \"${node_ini['global']['__KEEPER_ADMIN_EMAIL__']}\",  \"password\": \"${node_ini['global']['__KEEPER_ADMIN_PASSWORD__']}\" }",
-  }
-
-  # clean admin.txt if at least one user already created
-  exec { 'clean_admin.txt':
-    command  => "rm -f ${seafile_root}/conf/admin.txt",
-    onlyif  => "/bin/bash -c \"[[ -n \\$(mysql -s -N --user=${db['__DB_USER__']} --password=${db['__DB_PASSWORD__']} --database=ccnet-db --execute='SELECT * from EmailUser') ]];\"",
-    path     => ["/usr/bin", "/bin"],
-    require => [ File["${seafile_root}/conf/admin.txt"] ],
-  }
 
 
   #### KEEPER
@@ -461,7 +470,8 @@ define keeper::install (
 
   # start services
   service { 'memcached':
-    ensure          => running,
+    #ensure          => running,
+    ensure          => stopped,
     hasrestart      => true,
     enable          => true,
     require => Package['memcached'],
@@ -476,9 +486,10 @@ define keeper::install (
 
 
 
-	# START KEEPER
+  # START KEEPER
   service { 'keeper':
-    ensure     => running,
+    #ensure     => running,
+    ensure     => stopped,
     enable     => true,
     hasrestart => true,
     require    => [ Service['memcached'], Class['keeper::nginx'], Exec['create_keeper_database'] ],
