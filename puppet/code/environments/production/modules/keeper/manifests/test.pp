@@ -1,37 +1,45 @@
 class keeper::test {
 
-  $hash1 = {
-    'sec1' => {
-      'key1' => 'val1',
-      'key2' => 'val2',
-    },
-    'sec2' => {
-      'key1' => 'val1',
-      'key2' => 'val2',
-    },
-  }
-  $hash2 = {
-    'sec1' => {
-      'key4' => 'val4',
-      'key5' => 'val5',
-      'key6' => 'val6',
-    },
-    'sec2' => {
-      'key2' => 'hohoho',
-      'key4' => 'val4',
-      'key5' => 'val5',
-      'key6' => 'val6',
-    },
-  }
+
+  exec { "pip-from-get-pip.py":
+  	command => "curl https://bootstrap.pypa.io/get-pip.py > /tmp/get-pip.py && sudo python3 /tmp/get-pip.py && rm /tmp/get-pip.py",
+  	path    => ["/usr/bin", "/bin"],
+  	#require => [ Package["python3"], Package["python3-setuptools"] ],
+  }	
+  # $hash1 = {
+    # 'sec1' => {
+      # 'key1' => 'val1',
+      # 'key2' => 'val2',
+    # },
+    # 'sec2' => {
+      # 'key1' => 'val1',
+      # 'key2' => 'val2',
+    # },
+  # }
+  # $hash2 = {
+    # 'sec1' => {
+      # 'key4' => 'val4',
+      # 'key5' => 'val5',
+      # 'key6' => 'val6',
+    # },
+    # 'sec2' => {
+      # 'key2' => 'hohoho',
+      # 'key4' => 'val4',
+      # 'key5' => 'val5',
+      # 'key6' => 'val6',
+    # },
+  # }
+# 
+# 
+  # $merged = $hash1.reduce({}) |$memo, $x| {
+      # $memo + {$x[0] => $hash2[$x[0]] + $hash1[$x[0]]}
+  # }
+# 
+  # $res = deep_merge($hash1, $hash2)
+  # 
+  # notice("Hello!!! ${res}")
 
 
-  $merged = $hash1.reduce({}) |$memo, $x| {
-      $memo + {$x[0] => $hash2[$x[0]] + $hash1[$x[0]]}
-  }
-
-  $res = deep_merge($hash1, $hash2)
-  
-  notice("Hello!!! ${res}")
 
   # is needed for first seahub start, it will create server admin
   #  see https://github.com/haiwen/seafile-server/blob/master/scripts/check_init_admin.py#L358
