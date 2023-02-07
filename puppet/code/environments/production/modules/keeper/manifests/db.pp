@@ -77,14 +77,14 @@ class keeper::db (
     package_name => 'mariadb-client-10.4',
     package_ensure => "${deps['mariadb_ver']}",
     #require   => [Exec["apt-update"]],
-    require   => [Class["::mysql::server"]],
+    require   => [Class['::mysql::server']],
   }
 
 	
   $forced_packages_1 = ['libmariadb3:amd64', 'mysql-common', 'mariadb-common']
   package { $forced_packages_1:
     ensure    => "${deps['mariadb_ver']}",
-    require   => [Class["::mysql::server"]],
+    require   => [Class['::mysql::server']],
   }
 
 	# strictly install and hold versions to 10.4.17, never versions deadly block galera cluster due to not fixed bug (2022-12-16)!
@@ -94,7 +94,7 @@ class keeper::db (
    		command		=> "apt install ${p}=${deps['mariadb_ver']}; apt-mark hold ${p}",
    		#command		=> "apt install ${p}=${deps[mariadb_ver]} -y && apt-mark hold ${p}",
 		path		=> ["/usr/bin"],
-   		require		=> [Package["mariadb-common"]],
+   		require		=> [ Package['mariadb-common'] ],
    		logoutput	=>  true,
     }
   }
@@ -134,17 +134,21 @@ class keeper::db (
   $log_bin_dir = $db['__LOG_BIN__']
   # create bin log dir
   exec { "create_${log_bin_dir}":
-    command => "mkdir -p ${log_bin_dir}",
+    command => "mkdir -p ${log_bin_dir} && chown mysql:mysql ${log_bin_dir}",
     path    => ["/bin", "/usr/bin", "/usr/local/bin", "/sbin"],
     creates => "${log_bin_dir}",
     require => [ Class['::mysql::server'] ]
   }
 
-  file { "${log_bin_dir}":
-    owner   => 'mysql',
-    group   => 'mysql',
-    require => [ Exec["create_${log_bin_dir}"] ]
+  # restart nginx with new updated confs
+  exec { 'stop_maridb':
+    command => '/bin/systemctl stop mariadb',
+    require => [ Class['::mysql::server'] ]
   }
-
+  # file { "${log_bin_dir}":
+  #   owner   => 'mysql',
+  #   group   => 'mysql',
+  #   require => [ Exec["create_${log_bin_dir}"] ]
+  # }
 
 }
