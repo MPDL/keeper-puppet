@@ -7,3 +7,5 @@ seafile-license.txt
 puppet/code/environments/production/modules/keeper/manifests/init.pp
 puppet/code/environments/production/data/keeper-puppet.ini
 puppet/code/environments/production/modules/keeper/files/*.gz
+tags
+tags.*
