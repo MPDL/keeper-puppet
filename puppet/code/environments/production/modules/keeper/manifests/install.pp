@@ -300,7 +300,7 @@ define keeper::install (
   if ($node_ini['global']['__NODE_TYPE__'] != 'SINGLE') and ($node_ini['backend']['__GPFS_DEVICE__']) {
   	# This section runs for non SINGLE and GPFS_DEVICE is defined
   	# Create dirs/files and do not create db!
-    file { [ "${seafile_root}/ccnet", "${seafile_root}/pids", "${seafile_root}/seahub-data", "${seafile_root}/pro-data", "${seafile_root}/conf", "${seafile_root}/logs" ]:
+    file { [ "${seafile_root}/ccnet", "${seafile_root}/pids", "${seafile_root}/pro-data", "${seafile_root}/conf", "${seafile_root}/logs" ]:
       ensure => directory,
       *      => $attr,
       force => true,
