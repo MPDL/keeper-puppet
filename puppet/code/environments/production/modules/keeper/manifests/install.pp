@@ -68,8 +68,8 @@ define keeper::install (
     "git-core",
     "openjdk-8-jre",
     "python3",
+    "python3-dev",
     "python3-setuptools",
-    #"python3-pip",
     "poppler-utils",
     "clamav",
     "gettext",
@@ -125,11 +125,13 @@ define keeper::install (
     exec { "pip-${m}":
       command =>   "pip3 install --timeout=3600 ${m}",
       path    => ["/usr/bin", "/usr/local/bin", "/sbin"],
-      require => [ Package["python3-setuptools"], Exec["pip-from-get-pip.py"] ],
+      #require => [ Package["python3-setuptools"], Exec["pip-from-get-pip.py"] ],
+      require => [ Package["python3"], Package["python3-dev"], Package["libmysqlclient-dev"], Exec["pip-from-get-pip.py"] ],
       #unless  => "pip show ${m}",
       logoutput =>  true,
     }
   }
+
   exec { "upgrade-chardet":
     command =>   "pip3 install --timeout=3600 --upgrade chardet",
     path    => ["/usr/bin", "/usr/local/bin", "/sbin"],
@@ -313,6 +315,13 @@ define keeper::install (
     file { "${seafile_root}/seafile-data":
       ensure => link,
       target => "/keeper/seafile-data",
+      force => true,
+      * => $attr,
+    }
+
+    file { "${seafile_root}/seahub-data":
+      ensure => link,
+      target => "/keeper/seahub-data",
       force => true,
       * => $attr,
     }
