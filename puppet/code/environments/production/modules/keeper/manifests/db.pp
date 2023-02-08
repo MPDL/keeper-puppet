@@ -141,10 +141,10 @@ class keeper::db (
   }
 
   # restart nginx with new updated confs
-  exec { 'stop_maridb':
-    command => '/bin/systemctl stop mariadb',
-    require => [ Class['::mysql::server'] ]
-  }
+  #exec { 'stop_maridb':
+  #  command => '/bin/systemctl stop mariadb',
+  #  require => [ Class['::mysql::server'] ]
+  #}
   # file { "${log_bin_dir}":
   #   owner   => 'mysql',
   #   group   => 'mysql',
