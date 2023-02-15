@@ -60,6 +60,10 @@ define keeper::install (
     password    => "${sys['__OS_USER_PASSWORD__']}",
   }
 
+  #### TIMEZONE
+  exec { 'timezone':
+	command => '/usr/bin/timedatectl set-timezone Europe/Berlin'  	
+  }
 
   #### DEB MODULES
   $deb_modules = [
@@ -203,7 +207,7 @@ define keeper::install (
   $ini_memcached = regsubst("${node_ini['memcached']['__MEMCACHED_KA_UNICAST_PEERS__']}", "\n", "\\n", 'G')
 
   ini_setting {'memcached escape newline':
-		ensure  => present,
+	ensure  => present,
     section => 'memcached',
     path => "${ini_defaults['path']}",
     setting => '__MEMCACHED_KA_UNICAST_PEERS__',
@@ -215,7 +219,7 @@ define keeper::install (
     section => 'global',
     path => "${ini_defaults['path']}",
     setting => '__CLUSTER_NODES__',
-		value => "\"${node_ini['global']['__CLUSTER_NODES__']}\"",
+	value => "\"${node_ini['global']['__CLUSTER_NODES__']}\"",
   }
 
   ini_setting {'secret key quotes':
@@ -277,7 +281,7 @@ define keeper::install (
   #  mode   => '1777',
   #}
 
-	# BLOXBERG CERTS
+  # BLOXBERG CERTS
   dirtree { 'bloxberg storage':
     ensure  => present,
     path    => "${node_ini['bloxberg']['__BLOXBERG_CERTS_STORAGE__']}",
