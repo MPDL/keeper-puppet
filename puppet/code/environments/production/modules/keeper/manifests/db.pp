@@ -48,13 +48,7 @@ class keeper::db (
   }
   
   
-  notice("${deps['galera-4_ver']}")
-	
-  package { 'galera-4':
-    ensure    => "${deps['galera-4_ver']}",
-    require   => [Exec["apt-update"]],
-  }
-
+  
   # include '::mysql::server'
 
   # puppet module install puppetlabs-mysql 
@@ -108,6 +102,12 @@ class keeper::db (
     }
   }
 
+  notice("${deps['galera-4_ver']}")
+  exec { 'galera-4':
+    ensure    => "apt install galera-4=${deps['galera-4_ver']}; apt-mark hold galera-4",
+    path		=> ["/usr/bin"],
+    require   => [Exec["apt-update"], Package['mariadb-common']],
+  }
 
   #Apt::Source['mariadb'] ~>
   #Class['apt::update'] ->
