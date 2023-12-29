@@ -4,7 +4,8 @@
 #
 # @since 4.8.0
 #
-require 'inifile'
+require File.expand_path('/var/lib/gems/2.7.0/gems/inifile-3.0.0/lib/inifile', __dir__)
+# require 'inifile'
 
 Puppet::Functions.create_function(:ini_data) do
   dispatch :ini_data do

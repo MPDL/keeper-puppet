@@ -90,6 +90,6 @@ class keeper::test {
 
   
     
-  #notice("Hello!!! ${settings::environmentpath}/${settings::environment}")
+  notice("Hello!!! ${settings::environmentpath}/${settings::environment}")
 
 }

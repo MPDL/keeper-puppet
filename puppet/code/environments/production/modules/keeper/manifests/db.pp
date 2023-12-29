@@ -1,19 +1,24 @@
 # puppet module install puppetlabs-apt 
 
-class keeper::db (
-  $props = $keeper::params::props,
-) inherits keeper::params {
+define keeper::db (
+  Hash $props = {},
+  Hash $node_ini = {},
+) {
 
   $db = $props['db']
   $deps = $props['package-deps']
 
+  $ni_db = $node_ini['db']
+
+  notice("NODE_INI from DB: ${node_ini}")
+
   include apt
 
   # add 18.04 repos for 20.04
-  apt::source { 'bionic-security':
+  apt::source { 'focal-security':
     location => "http://security.ubuntu.com/ubuntu",
     repos => "main",
-    release => "bionic-security",
+    release => "focal-security",
     include  =>  {
       'src' =>  false,
       'deb' =>  true,
@@ -38,11 +43,10 @@ class keeper::db (
   exec { 'apt-update':
     command  => "apt update",
     path     => ["/usr/bin", "/bin"],
-    require => [ Apt::Source["mariadb"], Apt::Source["bionic-security"]],
+    require => [ Apt::Source["mariadb"], Apt::Source["focal-security"]],
   }
 
-
-  package { ['libssl1.0-dev', 'libssl1.0.0']:
+  package { ['libssl-dev:amd64', 'libssl1.1:amd64', 'libssl1.0.0:amd64']:
     # ensure    => "latest",
     require   => [Exec["apt-update"]],
   }
@@ -53,60 +57,51 @@ class keeper::db (
 
   # puppet module install puppetlabs-mysql 
   # mariadb-server
-  class { '::mysql::server':
-      package_name            => 'mariadb-server-10.4',
-      package_ensure          => "${deps['mariadb_ver']}",
-      service_name            => 'mysql',
-      root_password           => "${db['__DB_ROOT_PASSWORD__']}",
-      #require                 => [Package["mariadb-common"]],
-      require                 => [Exec["apt-update"]],
-  }
+  #class { '::mysql::server':
+  #    package_name            => 'mariadb-server',
+  #    package_ensure          => "${deps['mariadb_ver']}",
+  #    service_name            => 'mysql',
+  #    root_password           => "${db['__DB_ROOT_PASSWORD__']}",
+  #    #require                 => [Package["mariadb-common"]],
+  #    require                 => [Exec["apt-update"]],
+  #}
 
   #Apt::Source['mariadb'] ~>
   #Class['apt::update'] ->
   #Class['::mysql::server']
 
   # mariadb-client
-  class {'::mysql::client':
-    package_name => 'mariadb-client-10.4',
-    package_ensure => "${deps['mariadb_ver']}",
-    #require   => [Exec["apt-update"]],
-    require   => [Class['::mysql::server']],
-  }
+  #class {'::mysql::client':
+  #  package_name => 'mariadb-client',
+  #  package_ensure => "${deps['mariadb_ver']}",
+  #  #require   => [Exec["apt-update"]],
+  #  require   => [Class['::mysql::server']],
+  #}
 
 	
-  $forced_packages_1 = ['libmariadb3:amd64', 'mysql-common', 'mariadb-common']
-  package { $forced_packages_1:
-    ensure    => "${deps['mariadb_ver']}",
-    require   => [Class['::mysql::server']],
-  }
+  $db_pkgs = ['libmariadb3:amd64', 'mysql-common', 'mariadb-common', 'mariadb-client-core', 'mariadb-client', 'mariadb-server-core', 'mariadb-server']
+  $db_pkgs_string = join($db_pkgs, "=${deps['mariadb_ver']} ")
 
-	# strictly install and hold versions to 10.4.17, never versions deadly block galera cluster due to not fixed bug (2022-12-16)!
-  $forced_packages_2 = ["mariadb-server-core-10.4", "mariadb-client-core-10.4", "mariadb-client-10.4", "mariadb-client", "mariadb-server-10.4"]
-  each($forced_packages_2) |$p| {
-    exec { "force-and-hold-10.4.17_${p}":
-   		command		=> "apt install ${p}=${deps['mariadb_ver']}; apt-mark hold ${p}",
-   		#command		=> "apt install ${p}=${deps[mariadb_ver]} -y && apt-mark hold ${p}",
-		path		=> ["/usr/bin"],
-   		require		=> [ Package['mariadb-common'] ],
-   		logoutput	=>  true,
-    }
-  }
+  exec { 'install_db_pkgs':
+  	# command		=> "apt install $db_pkgs_string=${deps['mariadb_ver']}; apt-mark hold ${p}",
+  	command		=> "/usr/bin/apt install -y --allow-downgrades $db_pkgs_string=${deps['mariadb_ver']}",
+    # require   => [Class['::mysql::server']],
+    require   => Exec['apt-update'],
+ 		logoutput	=>  true,
+  }  
   
-  each($forced_packages_1) |$p| {
-    exec { "hold-10.4.17_${p}":
-   		command		=> "apt-mark hold ${p}",
-		path		=> ["/usr/bin"],
-   		require		=> [Exec["force-and-hold-10.4.17_${forced_packages_2[-1]}"]],
+  each($db_pkgs) |$p| {
+    exec { "hold_${p}":
+   		command		=> "/usr/bin/apt-mark hold ${p}",
+   		require		=> Exec['install_db_pkgs'],
    		logoutput	=>  true,
     }
   }
 
   notice("${deps['galera-4_ver']}")
   exec { 'galera-4':
-    ensure    => "apt install galera-4=${deps['galera-4_ver']}; apt-mark hold galera-4",
-    path		=> ["/usr/bin"],
-    require   => [Exec["apt-update"], Package['mariadb-common']],
+    command    => "/usr/bin/apt install galera-4=${deps['galera-4_ver']}; apt-mark hold galera-4",
+    require   => Exec['install_db_pkgs'],
   }
 
   #Apt::Source['mariadb'] ~>
@@ -115,8 +110,8 @@ class keeper::db (
 
   # seafile dbs 
   mysql::db { ['ccnet-db', 'seafile-db', 'seahub-db'] :
-    user     => "${db['__DB_USER__']}",
-    password => "${db['__DB_PASSWORD__']}",
+    user     => "${ni_db['__DB_USER__']}",
+    password => "${ni_db['__DB_PASSWORD__']}",
     host     => 'localhost',
     charset  => 'utf8',
     grant    => ['ALL'],
@@ -124,31 +119,29 @@ class keeper::db (
 
   # keeper db
   mysql::db { 'keeper-db':
-    user     => "${db['__DB_USER__']}",
-    password => "${db['__DB_PASSWORD__']}",
+    user     => "${ni_db['__DB_USER__']}",
+    password => "${ni_db['__DB_PASSWORD__']}",
     host     => 'localhost',
     charset  => 'utf8',
     grant    => ['ALL'],
   }
 
-  $log_bin_dir = $db['__LOG_BIN__']
+  exec { 'set_log_bin_trust_function_creators':
+    command  => "mysql --user=root --password=${db['__DB_ROOT_PASSWORD__']} -e \"SET GLOBAL log_bin_trust_function_creators = 1;\"",
+    path     => ["/usr/bin", "/bin"],
+    require => Exec['install_db_pkgs'],
+  }
+
+
+  $log_bin_dir = $ni_db['__LOG_BIN__']
   # create bin log dir
   exec { "create_${log_bin_dir}":
     command => "mkdir -p ${log_bin_dir} && chown mysql:mysql ${log_bin_dir}",
     path    => ["/bin", "/usr/bin", "/usr/local/bin", "/sbin"],
     creates => "${log_bin_dir}",
-    require => [ Class['::mysql::server'] ]
+    # require => [ Class['::mysql::server'] ]
+    require => [ Exec['install_db_pkgs'] ]
   }
 
-  # restart nginx with new updated confs
-  #exec { 'stop_maridb':
-  #  command => '/bin/systemctl stop mariadb',
-  #  require => [ Class['::mysql::server'] ]
-  #}
-  # file { "${log_bin_dir}":
-  #   owner   => 'mysql',
-  #   group   => 'mysql',
-  #   require => [ Exec["create_${log_bin_dir}"] ]
-  # }
 
 }

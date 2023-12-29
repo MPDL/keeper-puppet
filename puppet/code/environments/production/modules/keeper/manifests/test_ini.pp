@@ -32,6 +32,9 @@ define keeper::test_ini (
       '__SECRET_KEY__'   => "\"${props['global']['__SECRET_KEY__']}\"",
       '__KEEPER_ADMIN_PASSWORD__'   => { 'ensure' => 'absent' },
     },
+    'memcached' => {
+      '__MEMCACHED_KA_UNICAST_PEERS__' => { 'ensure' => 'absent' } 
+    },
     })
   $clean_sections = (($clean_settings.delete('repositories')).delete('package-deps')).delete('release')
 
@@ -47,7 +50,10 @@ define keeper::test_ini (
   }
 
   # generate keeper ini 
-  create_ini_settings($node_ini, $ini_defaults)
+  inifile::create_ini_settings($node_ini, $ini_defaults)
+
+  notice($node_ini)
+  notice($ini_defaults)
 
   file { "${ini_defaults['path']}":
     *      => $attr,
@@ -78,7 +84,19 @@ define keeper::test_ini (
     value => "\"${props['backup']['__REMOTE_LOG__']}\"",
   }
 
+  $ini_memcached = regsubst($props['memcached']['__MEMCACHED_KA_UNICAST_PEERS__'], "\n", "\\n", 'G')
+  notice("__MEMCACHED_KA_UNICAST_PEERS__ regsubst: $ini_memcached")
 
+  #ini_setting {'memcached escape newline':
+  ini_setting {'[memcached] __MEMCACHED_KA_UNICAST_PEERS__]':
+  	ensure  => present,
+    section => 'memcached',
+    path => "${ini_defaults['path']}",
+    setting => '__MEMCACHED_KA_UNICAST_PEERS__',
+    value => $ini_memcached,
+    # value => "${props['memcached']['__MEMCACHED_KA_UNICAST_PEERS__']}",
+  }
+ 
 }
 
 class keeper::test_ini::single {
