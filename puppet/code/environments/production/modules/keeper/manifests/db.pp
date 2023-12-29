@@ -108,6 +108,14 @@ define keeper::db (
   #Class['apt::update'] ->
   #Class['::mysql::client']
 
+  service { 'mariadb':
+    ensure          => running,
+    hasrestart      => true,
+    enable          => true,
+    require         => Exec['install_db_pkgs'],
+  }
+
+
   # seafile dbs 
   mysql::db { ['ccnet-db', 'seafile-db', 'seahub-db'] :
     user     => "${ni_db['__DB_USER__']}",
@@ -115,6 +123,7 @@ define keeper::db (
     host     => 'localhost',
     charset  => 'utf8',
     grant    => ['ALL'],
+    require  => Service['mariadb'],
   }
 
   # keeper db
@@ -124,6 +133,7 @@ define keeper::db (
     host     => 'localhost',
     charset  => 'utf8',
     grant    => ['ALL'],
+    require  => Service['mariadb'],
   }
 
   exec { 'set_log_bin_trust_function_creators':
