@@ -20,7 +20,7 @@ PUPPET_DEB=puppet8-release-focal.deb
 wget https://apt.puppetlabs.com/$PUPPET_DEB
 sudo dpkg -i --force-all $PUPPET_DEB
 rm -rf $PUPPET_DEB
-apt update && apt -y puppet
+apt update && apt -y install puppet-agent
 
 echo "PATH=\$PATH:/opt/puppetlabs/bin
 export LANGUAGE=en_US.UTF-8

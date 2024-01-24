@@ -88,7 +88,7 @@ Vagrant.configure("2") do |config|
   # SHELL
   config.vm.provision "shell", path: "scripts/vagrant_provision.sh"
   config.vm.provider "virtualbox" do |v|
-        v.memory = 4096
+        v.memory = 8192
         v.cpus = 2
   end
   

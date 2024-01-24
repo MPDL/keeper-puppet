@@ -5,8 +5,9 @@
 
 CONF_DIR=/etc/puppetlabs
 
+
 # sudo apt update
-sudo apt install -y puppet-agent=8.3.1-1focal
+sudo apt install -y puppet-agent=
 sudo puppet module install puppetlabs-mysql -v 14.0.0
 sudo puppet module install puppetlabs-concat -v 7.3.0
 sudo puppet module install puppetlabs-translate -v 2.2.0
@@ -29,7 +30,7 @@ pushd ${CONF_DIR}/code/environments/production
 sudo mv -v ~/keeper-puppet.ini data/
 sudo mv -v ~/seafile-license.txt data/keeper_files/
 sudo mv -v ~/mykey.peer data/keeper_files/
-sudo mv -v ~/seafile-pro-server_9.0.16_x86-64_Ubuntu.tar.gz modules/keeper/files/
+sudo mv -v ~/seafile-pro-server_10.0.11_x86-64_Ubuntu.tar.gz modules/keeper/files/
 sudo mv -v ~/init.pp modules/keeper/manifests/
 popd
 END
