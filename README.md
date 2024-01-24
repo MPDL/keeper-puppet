@@ -5,7 +5,7 @@ Puppet installation scripts for KEEPER infrastructure
 KEEPER cluster node installation on the bare installed Ubuntu 20.04.5 LTS:
 * run
   ```
-  ./scripts/install_puppet5.sh
+  ./scripts/install_puppet8.sh
   cd /etc/puppet/code/environments/production
   ```
 * put 
