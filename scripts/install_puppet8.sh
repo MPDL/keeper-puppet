@@ -7,7 +7,7 @@ CONF_DIR=/etc/puppetlabs
 
 
 # sudo apt update
-sudo apt install -y puppet-agent=
+sudo apt install -y puppet-agent=8.4.0-1focal
 sudo puppet module install puppetlabs-mysql -v 14.0.0
 sudo puppet module install puppetlabs-concat -v 7.3.0
 sudo puppet module install puppetlabs-translate -v 2.2.0
